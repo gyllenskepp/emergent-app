@@ -291,6 +291,126 @@ async def seed_database():
 
 # ==================== AUTH ENDPOINTS ====================
 
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class EmailRegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+@api_router.post("/auth/login")
+async def email_login(request: EmailLoginRequest, response: Response):
+    """Login with email and password"""
+    user = await db.users.find_one({"email": request.email.lower()}, {"_id": 0})
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Fel e-post eller lösenord")
+    
+    # Check if user has a password (email auth user)
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Detta konto använder Google-inloggning")
+    
+    if not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Fel e-post eller lösenord")
+    
+    # Create session
+    session_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    session_doc = {
+        "session_token": session_token,
+        "user_id": user["user_id"],
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    # Remove old sessions
+    await db.user_sessions.delete_many({"user_id": user["user_id"]})
+    await db.user_sessions.insert_one(session_doc)
+    
+    # Set cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    # Remove password_hash from response
+    user_response = {k: v for k, v in user.items() if k != "password_hash"}
+    
+    logger.info(f"User logged in: {request.email}")
+    return {"user": user_response, "session_token": session_token}
+
+@api_router.post("/auth/register")
+async def email_register(request: EmailRegisterRequest, response: Response):
+    """Register with email and password"""
+    email = request.email.lower().strip()
+    
+    # Check if user exists
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="E-postadressen är redan registrerad")
+    
+    # Create user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    new_user = {
+        "user_id": user_id,
+        "email": email,
+        "name": request.name,
+        "password_hash": hash_password(request.password),
+        "picture": None,
+        "role": "member",
+        "phone": None,
+        "auth_type": "email",
+        "notification_preferences": {
+            "enabled": False,
+            "categories": {
+                "open_game_night": False,
+                "member_night": False,
+                "tournament": False,
+                "special_event": False,
+                "news": False
+            },
+            "reminder_times": ["24h"]
+        },
+        "push_token": None,
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db.users.insert_one(new_user)
+    
+    # Create session
+    session_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    session_doc = {
+        "session_token": session_token,
+        "user_id": user_id,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db.user_sessions.insert_one(session_doc)
+    
+    # Set cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    # Remove password_hash from response
+    user_response = {k: v for k, v in new_user.items() if k != "password_hash"}
+    
+    logger.info(f"New user registered: {email}")
+    return {"user": user_response, "session_token": session_token}
+
 @api_router.post("/auth/session")
 async def create_session(request: Request, response: Response):
     """Exchange session_id from Emergent Auth for session_token"""
