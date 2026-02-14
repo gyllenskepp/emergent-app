@@ -502,6 +502,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
