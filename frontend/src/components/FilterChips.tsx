@@ -52,23 +52,23 @@ export function FilterChips({ chips, selectedId, onSelect }: FilterChipsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    gap: 4,
   },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
   },
   chipOutline: {
     backgroundColor: Colors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
   },
   chipTextSelected: {
