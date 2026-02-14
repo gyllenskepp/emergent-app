@@ -349,3 +349,5 @@ agent_communication:
     message: "Initial MVP implementation complete. All 5 tabs working with Swedish UI. Backend seeded with admin user, categories, sample events and news. Ready for backend API testing."
   - agent: "testing"
     message: "✅ BACKEND API TESTING COMPLETE: All core backend APIs tested and working. Events CRUD (✅), News CRUD (✅), Categories API (✅), Auth endpoints (✅), Calendar ICS (✅). Created comprehensive test suite in /app/backend_test.py. All 8 test cases passed. Backend is fully functional and ready for production."
+  - agent: "testing"
+    message: "✅ EMAIL/PASSWORD AUTHENTICATION FLOW FULLY TESTED: Comprehensive testing completed against production URL https://borka-mobile-dev.preview.emergentagent.com. All 3 authentication scenarios passed: (1) POST /api/auth/login with admin@borka.se/borka2024 returns 200 with correct user object and session_token, (2) GET /api/auth/me with Bearer token returns 200 with user data, (3) Wrong password login returns 401 with error message. JSON request/response flow working correctly. Authentication system is production-ready."
