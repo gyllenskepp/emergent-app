@@ -333,10 +333,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Events API - CRUD operations"
-    - "News API - CRUD operations"
-    - "Calendar ICS feed"
-    - "Auth endpoints (Google OAuth)"
+    - "User profile endpoints"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
