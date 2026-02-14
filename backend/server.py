@@ -178,6 +178,14 @@ async def require_admin(request: Request) -> User:
 
 # ==================== SEED DATA ====================
 
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify a password against its hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
 async def seed_database():
     """Seed database with default categories and admin user"""
     # Seed categories
@@ -194,17 +202,21 @@ async def seed_database():
             await db.categories.insert_one(cat)
             logger.info(f"Created category: {cat['name']}")
     
-    # Seed admin user
-    admin_email = "admin@borka.se"
+    # Seed admin user with password
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@borka.se")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "borka2024")
+    
     existing_admin = await db.users.find_one({"email": admin_email})
     if not existing_admin:
         admin_user = {
             "user_id": f"user_{uuid.uuid4().hex[:12]}",
             "email": admin_email,
             "name": "BORKA Admin",
+            "password_hash": hash_password(admin_password),
             "picture": None,
             "role": "admin",
             "phone": None,
+            "auth_type": "email",  # email or google
             "notification_preferences": {
                 "enabled": True,
                 "categories": {
@@ -220,16 +232,7 @@ async def seed_database():
             "created_at": datetime.now(timezone.utc)
         }
         await db.users.insert_one(admin_user)
-        
-        # Create a session for admin (for testing)
-        admin_session = {
-            "session_token": "admin_test_session_token",
-            "user_id": admin_user["user_id"],
-            "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
-            "created_at": datetime.now(timezone.utc)
-        }
-        await db.user_sessions.insert_one(admin_session)
-        logger.info(f"Created admin user: {admin_email}")
+        logger.info(f"Created admin user: {admin_email} with password: {admin_password}")
     
     # Seed some sample events
     existing_events = await db.events.count_documents({})
