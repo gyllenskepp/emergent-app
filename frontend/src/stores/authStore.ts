@@ -10,6 +10,7 @@ export interface User {
   picture?: string;
   role: 'admin' | 'member' | 'guest';
   phone?: string;
+  auth_type?: 'email' | 'google';
   notification_preferences: {
     enabled: boolean;
     categories: {
@@ -29,12 +30,16 @@ interface AuthState {
   sessionToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
   
   setUser: (user: User | null) => void;
   setSessionToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   
   login: (sessionId: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
@@ -46,14 +51,82 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   sessionToken: null,
   isLoading: true,
   isAuthenticated: false,
+  error: null,
   
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   setSessionToken: (sessionToken) => set({ sessionToken }),
   setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error }),
+  
+  loginWithEmail: async (email: string, password: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Inloggning misslyckades');
+      }
+      
+      const data = await response.json();
+      
+      await AsyncStorage.setItem('session_token', data.session_token);
+      
+      set({
+        user: data.user,
+        sessionToken: data.session_token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      set({ isLoading: false, isAuthenticated: false, error: error.message });
+      throw error;
+    }
+  },
+  
+  register: async (email: string, password: string, name: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Registrering misslyckades');
+      }
+      
+      const data = await response.json();
+      
+      await AsyncStorage.setItem('session_token', data.session_token);
+      
+      set({
+        user: data.user,
+        sessionToken: data.session_token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      set({ isLoading: false, isAuthenticated: false, error: error.message });
+      throw error;
+    }
+  },
   
   login: async (sessionId: string) => {
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
       
       const response = await fetch(`${API_URL}/api/auth/session`, {
         method: 'POST',
