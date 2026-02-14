@@ -150,13 +150,13 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: GET /api/categories returns exactly 4 categories: Öppen spelkväll, Medlemskväll, Turnering, Specialevent"
 
-  - task: "Auth endpoints (Google OAuth)"
+  - task: "Auth endpoints (Google OAuth + Email/Password)"
     implemented: true
     working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -164,6 +164,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ VERIFIED: GET /api/auth/me returns 401 without token, returns admin user data with Bearer admin_test_session_token. Authentication is working correctly."
+      - working: true
+        agent: "main"
+        comment: "Added email/password login (POST /api/auth/login) and registration (POST /api/auth/register). curl test confirms API works with admin@borka.se/borka2024. User reports frontend login not working - needs E2E testing."
 
   - task: "User profile endpoints"
     implemented: true
