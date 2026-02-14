@@ -179,15 +179,18 @@ backend:
 
   - task: "Calendar ICS feed"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/calendar/ics and GET /api/calendar/event/{id}/ics implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/calendar/ics returns valid ICS format with Content-Type: text/calendar, contains proper VCALENDAR structure with events. Calendar export is working correctly."
 
   - task: "Database seeding (categories, admin, sample data)"
     implemented: true
