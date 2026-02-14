@@ -126,11 +126,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "GET /api/news returns news, POST/PUT/DELETE endpoints implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/news returns 1 sample news item, POST /api/news creates news with admin token, DELETE /api/news removes news. All CRUD operations working correctly."
 
   - task: "Categories API"
     implemented: true
