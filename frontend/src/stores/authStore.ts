@@ -73,19 +73,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const loginUrl = `${API_URL}/api/auth/login`;
+      console.log('[Auth] Attempting login to:', loginUrl);
+      
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
       
+      console.log('[Auth] Response status:', response.status);
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Inloggning misslyckades');
+        let errorMessage = 'Inloggning misslyckades';
+        try {
+          const data = await response.json();
+          errorMessage = data.detail || errorMessage;
+        } catch (e) {
+          console.error('[Auth] Could not parse error response');
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
+      console.log('[Auth] Login successful for:', data.user?.email);
       
       await AsyncStorage.setItem('session_token', data.session_token);
       
@@ -97,6 +109,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      console.error('[Auth] Login error:', error.message);
       set({ isLoading: false, isAuthenticated: false, error: error.message });
       throw error;
     }
