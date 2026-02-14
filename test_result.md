@@ -101,3 +101,231 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Build a BORKA mobile app (iOS + Android + web) for the Swedish board game/roleplay association. Features: 5 bottom tabs (Start, Kalender, Nyheter, Info, Profil), Google OAuth authentication with roles (admin/member/guest), calendar with events, ICS export, news feed, notification preferences, admin panel"
+
+backend:
+  - task: "Events API - CRUD operations"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/events returns events, POST/PUT/DELETE endpoints implemented"
+
+  - task: "News API - CRUD operations"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/news returns news, POST/PUT/DELETE endpoints implemented"
+
+  - task: "Categories API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/categories returns 4 seeded categories"
+
+  - task: "Auth endpoints (Google OAuth)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/auth/session, GET /api/auth/me, POST /api/auth/logout implemented with Emergent OAuth"
+
+  - task: "User profile endpoints"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET/PUT /api/users/me, PUT /api/users/me/push-token implemented"
+
+  - task: "Calendar ICS feed"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/calendar/ics and GET /api/calendar/event/{id}/ics implemented"
+
+  - task: "Database seeding (categories, admin, sample data)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Seed admin user (admin@borka.se), 4 categories, sample events and news created on startup"
+
+frontend:
+  - task: "Tab navigation (5 tabs)"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Bottom tabs: Start, Kalender, Nyheter, Info, Profil all working - verified via screenshot"
+
+  - task: "Home screen (Start)"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Hero, opening hours, address, quick buttons, next event card, about section - all visible in screenshot"
+
+  - task: "Calendar screen with list/month view"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/calendar.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "List/month toggle, filter chips, event cards with 'Lägg till i kalender' - all visible in screenshot"
+
+  - task: "News screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/news.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "News feed showing sample news item"
+
+  - task: "Info screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/info.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "About BORKA, how it works, membership, contact info - all visible in screenshot"
+
+  - task: "Profile screen with Google login"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Shows 'Logga in med Google' button for unauthenticated users - verified via screenshot"
+
+  - task: "Event detail screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/event/[id].tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented with calendar export functionality"
+
+  - task: "News detail screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/news/[id].tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented with full news content display"
+
+  - task: "Admin events management"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/admin/events.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Create/edit/delete events modal - requires admin authentication"
+
+  - task: "Admin news management"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/admin/news.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Create/edit/delete news modal - requires admin authentication"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Events API - CRUD operations"
+    - "News API - CRUD operations"
+    - "Calendar ICS feed"
+    - "Auth endpoints (Google OAuth)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Initial MVP implementation complete. All 5 tabs working with Swedish UI. Backend seeded with admin user, categories, sample events and news. Ready for backend API testing."
