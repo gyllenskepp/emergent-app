@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+// Get API URL - for web, use relative path; for native, use the env variable
+const getApiUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (envUrl) return envUrl;
+  // For web, relative paths work due to proxy
+  if (Platform.OS === 'web') return '';
+  // Fallback for native
+  return '';
+};
+
+const API_URL = getApiUrl();
 
 export interface User {
   user_id: string;
