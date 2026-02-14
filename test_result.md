@@ -141,11 +141,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "GET /api/categories returns 4 seeded categories"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/categories returns exactly 4 categories: Öppen spelkväll, Medlemskväll, Turnering, Specialevent"
 
   - task: "Auth endpoints (Google OAuth)"
     implemented: true
