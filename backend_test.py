@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 
 # Backend URL from frontend environment
-BASE_URL = "https://borka-mobil.preview.emergentagent.com/api"
+BASE_URL = "https://borka-mobile-dev.preview.emergentagent.com/api"
 ADMIN_TOKEN = "admin_test_session_token"
 
 def test_get_events():
