@@ -156,7 +156,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -167,6 +167,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Added email/password login (POST /api/auth/login) and registration (POST /api/auth/register). curl test confirms API works with admin@borka.se/borka2024. User reports frontend login not working - needs E2E testing."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Complete email/password auth flow tested against BASE_URL https://borka-mobile-dev.preview.emergentagent.com - POST /api/auth/login with admin@borka.se/borka2024 returns 200 with user object (role: admin, email correct) and session_token; GET /api/auth/me with Bearer token returns 200 with user data; Wrong password login correctly returns 401 with error message. All 3 authentication scenarios working perfectly."
 
   - task: "User profile endpoints"
     implemented: true
