@@ -9,6 +9,8 @@ import {
   Alert,
   Linking,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,9 +21,17 @@ import { Button } from '../../src/components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
+type AuthMode = 'login' | 'register';
+
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, updateUser } = useAuthStore();
+  const { user, isAuthenticated, logout, updateUser, loginWithEmail, register, error, setError } = useAuthStore();
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     user?.notification_preferences?.enabled || false
   );
@@ -35,8 +45,7 @@ export default function ProfileScreen() {
     }
   );
 
-  const handleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+  const handleGoogleLogin = () => {
     const redirectUrl = Platform.OS === 'web'
       ? window.location.origin + '/auth-callback'
       : `${API_URL}/auth-callback`;
@@ -47,6 +56,36 @@ export default function ProfileScreen() {
       window.location.href = authUrl;
     } else {
       Linking.openURL(authUrl);
+    }
+  };
+
+  const handleEmailAuth = async () => {
+    if (!email.trim()) {
+      Alert.alert('Fel', 'Ange e-postadress');
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert('Fel', 'Ange lösenord');
+      return;
+    }
+    if (authMode === 'register' && !name.trim()) {
+      Alert.alert('Fel', 'Ange ditt namn');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      if (authMode === 'login') {
+        await loginWithEmail(email.trim(), password);
+      } else {
+        await register(email.trim(), password, name.trim());
+      }
+    } catch (err: any) {
+      Alert.alert('Fel', err.message || 'Något gick fel');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -125,19 +164,109 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profil</Text>
-        </View>
-        <View style={styles.notLoggedIn}>
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={48} color={Colors.textMuted} />
-          </View>
-          <Text style={styles.notLoggedInTitle}>Välkommen till BORKA</Text>
-          <Text style={styles.notLoggedInText}>
-            Logga in för att få tillgång till personliga inställningar, notiser och mer.
-          </Text>
-          <Button title="Logga in med Google" onPress={handleLogin} />
-        </View>
+        <KeyboardAvoidingView 
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView 
+            style={styles.scrollView} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.loginContent}
+          >
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Profil</Text>
+            </View>
+
+            <View style={styles.loginContainer}>
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={48} color={Colors.textMuted} />
+              </View>
+              <Text style={styles.welcomeTitle}>Välkommen till BORKA</Text>
+              <Text style={styles.welcomeText}>
+                Logga in för att få tillgång till personliga inställningar, notiser och mer.
+              </Text>
+
+              {/* Auth Mode Tabs */}
+              <View style={styles.authTabs}>
+                <TouchableOpacity
+                  style={[styles.authTab, authMode === 'login' && styles.authTabActive]}
+                  onPress={() => setAuthMode('login')}
+                >
+                  <Text style={[styles.authTabText, authMode === 'login' && styles.authTabTextActive]}>
+                    Logga in
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.authTab, authMode === 'register' && styles.authTabActive]}
+                  onPress={() => setAuthMode('register')}
+                >
+                  <Text style={[styles.authTabText, authMode === 'register' && styles.authTabTextActive]}>
+                    Registrera
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Email Form */}
+              <View style={styles.formContainer}>
+                {authMode === 'register' && (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Namn"
+                    placeholderTextColor={Colors.textMuted}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                  />
+                )}
+                <TextInput
+                  style={styles.input}
+                  placeholder="E-postadress"
+                  placeholderTextColor={Colors.textMuted}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Lösenord"
+                  placeholderTextColor={Colors.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+                
+                <Button
+                  title={authMode === 'login' ? 'Logga in' : 'Registrera'}
+                  onPress={handleEmailAuth}
+                  loading={isSubmitting}
+                />
+
+                {authMode === 'login' && (
+                  <Text style={styles.adminHint}>
+                    Admin: admin@borka.se / borka2024
+                  </Text>
+                )}
+              </View>
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>eller</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Google Login */}
+              <Button
+                title="Fortsätt med Google"
+                variant="outline"
+                onPress={handleGoogleLogin}
+                icon={<Ionicons name="logo-google" size={20} color={Colors.primary} />}
+              />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -154,15 +283,9 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.userCard}>
             <View style={styles.avatar}>
-              {user?.picture ? (
-                <View style={styles.avatarImage}>
-                  <Ionicons name="person" size={32} color={Colors.textLight} />
-                </View>
-              ) : (
-                <View style={styles.avatarImage}>
-                  <Ionicons name="person" size={32} color={Colors.textLight} />
-                </View>
-              )}
+              <View style={styles.avatarImage}>
+                <Ionicons name="person" size={32} color={Colors.textLight} />
+              </View>
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{user?.name}</Text>
@@ -197,9 +320,9 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.divider} />
                 <Text style={styles.subsectionTitle}>Kategorier</Text>
-                {Object.entries(CategoryNames).map(([key, name]) => (
+                {Object.entries(CategoryNames).map(([key, label]) => (
                   <View key={key} style={styles.settingRow}>
-                    <Text style={styles.categoryLabel}>{name}</Text>
+                    <Text style={styles.categoryLabel}>{label}</Text>
                     <Switch
                       value={categoryPrefs[key as keyof typeof categoryPrefs]}
                       onValueChange={(value) => toggleCategory(key, value)}
@@ -282,6 +405,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  keyboardView: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -294,33 +420,95 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  notLoggedIn: {
+  loginContent: {
+    flexGrow: 1,
+  },
+  loginContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
   },
   avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: Colors.surfaceSecondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
-  notLoggedInTitle: {
+  welcomeTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
+    textAlign: 'center',
     marginBottom: 8,
   },
-  notLoggedInText: {
-    fontSize: 16,
+  welcomeText: {
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  authTabs: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  authTab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  authTabActive: {
+    backgroundColor: Colors.surface,
+  },
+  authTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  authTabTextActive: {
+    color: Colors.text,
+  },
+  formContainer: {
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+  },
+  adminHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: Colors.textMuted,
   },
   section: {
     paddingHorizontal: 16,
