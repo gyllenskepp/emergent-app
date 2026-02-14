@@ -636,7 +636,7 @@ def generate_ics(events: List[dict]) -> str:
             f"DTSTART:{start_time.strftime('%Y%m%dT%H%M%SZ')}",
             f"DTEND:{end_time.strftime('%Y%m%dT%H%M%SZ')}",
             f"SUMMARY:{event['title']}",
-            f"DESCRIPTION:{event.get('description', '').replace(chr(10), '\\n')}",
+            f"DESCRIPTION:{event.get('description', '').replace(chr(10), ' ')}",
             f"LOCATION:{event.get('location', 'Odengatan 31, Sandviken')}",
             f"DTSTAMP:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
             "END:VEVENT",
