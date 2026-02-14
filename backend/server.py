@@ -316,22 +316,39 @@ async def create_session(request: Request, response: Response):
     # Check if user exists
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
     
+    # Check if this should be admin (first user or configured admin email)
+    admin_emails = os.environ.get("ADMIN_EMAILS", "").split(",")
+    admin_emails = [e.strip().lower() for e in admin_emails if e.strip()]
+    
+    # Check if ANY admin exists
+    existing_admin = await db.users.find_one({"role": "admin"})
+    
+    # Determine role: admin if email is in ADMIN_EMAILS list OR if no admin exists yet (first user becomes admin)
+    is_admin = email.lower() in admin_emails or (not existing_admin and not existing_user)
+    
     if existing_user:
         user_id = existing_user["user_id"]
-        # Update user info if needed
+        update_data = {"name": name, "picture": picture}
+        # Upgrade to admin if needed
+        if is_admin and existing_user.get("role") != "admin":
+            update_data["role"] = "admin"
+            logger.info(f"Upgraded user {email} to admin")
         await db.users.update_one(
             {"user_id": user_id},
-            {"$set": {"name": name, "picture": picture}}
+            {"$set": update_data}
         )
     else:
         # Create new user
         user_id = f"user_{uuid.uuid4().hex[:12]}"
+        role = "admin" if is_admin else "member"
+        if is_admin:
+            logger.info(f"Creating new admin user: {email}")
         new_user = {
             "user_id": user_id,
             "email": email,
             "name": name,
             "picture": picture,
-            "role": "member",
+            "role": role,
             "phone": None,
             "notification_preferences": {
                 "enabled": False,
