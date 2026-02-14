@@ -111,11 +111,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "GET /api/events returns events, POST/PUT/DELETE endpoints implemented"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: GET /api/events returns 2 sample events, POST /api/events creates events with admin token, DELETE /api/events removes events. All CRUD operations working correctly."
 
   - task: "News API - CRUD operations"
     implemented: true
