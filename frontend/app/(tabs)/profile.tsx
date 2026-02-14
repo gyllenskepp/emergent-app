@@ -243,6 +243,13 @@ export default function ProfileScreen() {
                   loading={isSubmitting}
                 />
 
+                {/* Error message display */}
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
                 {authMode === 'login' && (
                   <Text style={styles.adminHint}>
                     Admin: admin@borka.se / borka2024
