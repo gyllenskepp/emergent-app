@@ -46,14 +46,17 @@ export function usePushNotifications() {
     });
 
     return () => {
-      // removeNotificationSubscription is not available on web
-      if (Platform.OS !== 'web') {
+      // Use the subscription's remove method instead of the deprecated removeNotificationSubscription
+      try {
         if (notificationListener.current) {
-          Notifications.removeNotificationSubscription(notificationListener.current);
+          notificationListener.current.remove();
         }
         if (responseListener.current) {
-          Notifications.removeNotificationSubscription(responseListener.current);
+          responseListener.current.remove();
         }
+      } catch (e) {
+        // Silently handle if remove is not available
+        console.log('Could not remove notification listeners:', e);
       }
     };
   }, [isAuthenticated]);
