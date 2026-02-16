@@ -1,15 +1,35 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// Get API URL - for web, use relative path; for native, use the env variable
+// Get API URL - for web, use relative path; for native, use the full URL
 const getApiUrl = () => {
+  // Try environment variable first
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (envUrl) return envUrl;
+  if (envUrl && envUrl.length > 0) {
+    console.log('[Auth] Using env URL:', envUrl);
+    return envUrl;
+  }
+  
+  // Try expo config
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const baseUrl = `https://${hostUri.split(':')[0]}`;
+    console.log('[Auth] Using hostUri URL:', baseUrl);
+    return baseUrl;
+  }
+  
   // For web, relative paths work due to proxy
-  if (Platform.OS === 'web') return '';
-  // Fallback for native
-  return '';
+  if (Platform.OS === 'web') {
+    console.log('[Auth] Using relative URL for web');
+    return '';
+  }
+  
+  // Fallback - use the known preview URL
+  const fallbackUrl = 'https://borka-mobile-dev.preview.emergentagent.com';
+  console.log('[Auth] Using fallback URL:', fallbackUrl);
+  return fallbackUrl;
 };
 
 const API_URL = getApiUrl();
