@@ -44,21 +44,7 @@ export default function ProfileScreen() {
       news: false,
     }
   );
-
-  const handleGoogleLogin = () => {
-    const redirectUrl = Platform.OS === 'web'
-      ? window.location.origin + '/auth-callback'
-      : `${API_URL}/auth-callback`;
-    
-    const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-    
-    if (Platform.OS === 'web') {
-      window.location.href = authUrl;
-    } else {
-      Linking.openURL(authUrl);
-    }
-  };
-
+  
   const handleEmailAuth = async () => {
     if (!email.trim()) {
       Alert.alert('Fel', 'Ange e-postadress');
@@ -256,21 +242,6 @@ export default function ProfileScreen() {
                   </Text>
                 )}
               </View>
-
-              {/* Divider */}
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>eller</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Google Login */}
-              <Button
-                title="Fortsätt med Google"
-                variant="outline"
-                onPress={handleGoogleLogin}
-                icon={<Ionicons name="logo-google" size={20} color={Colors.primary} />}
-              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
