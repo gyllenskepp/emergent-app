@@ -21,15 +21,11 @@ import { Button } from '../../src/components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-type AuthMode = 'login' | 'register';
-
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, updateUser, loginWithEmail, register, error, setError } = useAuthStore();
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const { user, isAuthenticated, logout, updateUser, loginWithEmail, error, setError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(
@@ -45,35 +41,27 @@ export default function ProfileScreen() {
     }
   );
   
-  const handleEmailAuth = async () => {
-    if (!email.trim()) {
-      Alert.alert('Fel', 'Ange e-postadress');
-      return;
-    }
-    if (!password.trim()) {
-      Alert.alert('Fel', 'Ange lösenord');
-      return;
-    }
-    if (authMode === 'register' && !name.trim()) {
-      Alert.alert('Fel', 'Ange ditt namn');
-      return;
-    }
+const handleEmailAuth = async () => {
+  if (!email.trim()) {
+    Alert.alert('Fel', 'Ange e-postadress');
+    return;
+  }
+  if (!password.trim()) {
+    Alert.alert('Fel', 'Ange lösenord');
+    return;
+  }
 
-    setIsSubmitting(true);
-    setError(null);
-    
-    try {
-      if (authMode === 'login') {
-        await loginWithEmail(email.trim(), password);
-      } else {
-        await register(email.trim(), password, name.trim());
-      }
-    } catch (err: any) {
-      Alert.alert('Fel', err.message || 'Något gick fel');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  setIsSubmitting(true);
+  setError(null);
+
+  try {
+    await loginWithEmail(email.trim(), password);
+  } catch (err: any) {
+    Alert.alert('Fel', err.message || 'Fel inloggning');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleLogout = async () => {
     Alert.alert(
@@ -172,26 +160,6 @@ export default function ProfileScreen() {
                 Logga in för att få tillgång till personliga inställningar, notiser och mer.
               </Text>
 
-              {/* Auth Mode Tabs */}
-              <View style={styles.authTabs}>
-                <TouchableOpacity
-                  style={[styles.authTab, authMode === 'login' && styles.authTabActive]}
-                  onPress={() => setAuthMode('login')}
-                >
-                  <Text style={[styles.authTabText, authMode === 'login' && styles.authTabTextActive]}>
-                    Logga in
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.authTab, authMode === 'register' && styles.authTabActive]}
-                  onPress={() => setAuthMode('register')}
-                >
-                  <Text style={[styles.authTabText, authMode === 'register' && styles.authTabTextActive]}>
-                    Registrera
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               {/* Email Form */}
               <View style={styles.formContainer}>
                 {authMode === 'register' && (
@@ -224,7 +192,7 @@ export default function ProfileScreen() {
                 />
                 
                 <Button
-                  title={authMode === 'login' ? 'Logga in' : 'Registrera'}
+                  title="Logga in"
                   onPress={handleEmailAuth}
                   loading={isSubmitting}
                 />
@@ -236,10 +204,9 @@ export default function ProfileScreen() {
                   </View>
                 )}
 
-                {authMode === 'login' && (
-                  <Text style={styles.adminHint}>
-                    Admin: admin@borka.se / borka2024
-                  </Text>
+                <Text style={styles.adminHint}>
+                  Kontakta admin för konto.
+                </Text>
                 )}
               </View>
             </View>
