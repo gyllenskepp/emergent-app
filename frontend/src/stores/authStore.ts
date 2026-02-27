@@ -75,6 +75,7 @@ interface AuthState {
   checkAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   updatePushToken: (token: string) => Promise<void>;
+  createUserAsAdmin: (payload: { email: string; name: string; role?: 'member' | 'admin' }) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -135,38 +136,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  register: async (email: string, password: string, name: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Registrering misslyckades');
-      }
-      
-      const data = await response.json();
-      
-      await AsyncStorage.setItem('session_token', data.session_token);
-      
-      set({
-        user: data.user,
-        sessionToken: data.session_token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-    } catch (error: any) {
-      set({ isLoading: false, isAuthenticated: false, error: error.message });
-      throw error;
-    }
-  },
+  register: async () => {
+  throw new Error('Registrering är avstängd. Kontakta admin för att få ett konto.');
+},
   
   login: async (sessionId: string) => {
     try {
@@ -302,4 +274,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Update push token error:', error);
     }
   },
+  
+  createUserAsAdmin: async ({ email, name, role = 'member' }) => {
+  try {
+    const { sessionToken } = get();
+    if (!sessionToken) throw new Error('Inte inloggad');
+
+    const response = await fetch(`${API_URL}/api/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({ email, name, role }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      let msg = 'Kunde inte skapa användare';
+      try {
+        const data = await response.json();
+        msg = data.detail || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+  } catch (error: any) {
+    console.error('[Auth] createUserAsAdmin error:', error.message);
+    throw error;
+  }
+},
 }));

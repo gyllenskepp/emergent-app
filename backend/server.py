@@ -346,8 +346,7 @@ async def email_login(request: EmailLoginRequest, response: Response):
     logger.info(f"User logged in: {request.email}")
     return {"user": user_response, "session_token": session_token}
 
-@api_router.post("/auth/register")
-async def email_register(request: EmailRegisterRequest, response: Response):
+
     """Register with email and password"""
     email = request.email.lower().strip()
     
@@ -573,6 +572,57 @@ async def update_push_token(request: Request):
     )
     
     return {"message": "Push token uppdaterad"}
+
+# ==================== ADMIN USER MANAGEMENT ====================
+
+class AdminCreateUser(BaseModel):
+    email: str
+    name: str
+    role: Optional[str] = "member"  # member | admin
+
+
+@api_router.post("/admin/users")
+async def admin_create_user(request: Request, body: AdminCreateUser):
+    """Admin creates a member account (no password yet)"""
+    admin = await require_admin(request)
+
+    email = body.email.lower().strip()
+
+    # Check existing
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Användaren finns redan")
+
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+
+    new_user = {
+        "user_id": user_id,
+        "email": email,
+        "name": body.name,
+        "picture": None,
+        "role": body.role,
+        "phone": None,
+        "auth_type": "admin_created",
+        "notification_preferences": {
+            "enabled": False,
+            "categories": {
+                "open_game_night": True,
+                "member_night": True,
+                "tournament": True,
+                "special_event": True,
+                "news": True
+            },
+            "reminder_times": ["24h"]
+        },
+        "push_token": None,
+        "created_at": datetime.now(timezone.utc)
+    }
+
+    await db.users.insert_one(new_user)
+
+    logger.info(f"Admin {admin.email} created user {email}")
+
+    return {"message": "User created", "user_id": user_id}
 
 # ==================== EVENTS ENDPOINTS ====================
 
