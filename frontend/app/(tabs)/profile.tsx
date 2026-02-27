@@ -294,31 +294,49 @@ const handleEmailAuth = async () => {
           </View>
         </View>
 
-        {/* Admin Panel */}
-        {user?.role === 'admin' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Adminpanel</Text>
-            <View style={styles.card}>
-              <TouchableOpacity 
-                style={styles.adminItem}
-                onPress={() => router.push('/admin/events')}
-              >
-                <Ionicons name="calendar" size={24} color={Colors.primary} />
-                <Text style={styles.adminItemText}>Hantera event</Text>
-                <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity 
-                style={styles.adminItem}
-                onPress={() => router.push('/admin/news')}
-              >
-                <Ionicons name="newspaper" size={24} color={Colors.secondary} />
-                <Text style={styles.adminItemText}>Hantera nyheter</Text>
-                <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+{/* Admin Panel */}
+{user?.role === 'admin' && (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Adminpanel</Text>
+    <View style={styles.card}>
+
+      {/* EVENTS */}
+      <TouchableOpacity 
+        style={styles.adminItem}
+        onPress={() => router.push('/admin/events')}
+      >
+        <Ionicons name="calendar" size={24} color={Colors.primary} />
+        <Text style={styles.adminItemText}>Hantera event</Text>
+        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* MEMBERS — NY */}
+      <TouchableOpacity 
+        style={styles.adminItem}
+        onPress={() => router.push('/admin/members')}
+      >
+        <Ionicons name="people" size={24} color={Colors.primary} />
+        <Text style={styles.adminItemText}>Hantera medlemmar</Text>
+        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* NEWS */}
+      <TouchableOpacity 
+        style={styles.adminItem}
+        onPress={() => router.push('/admin/news')}
+      >
+        <Ionicons name="newspaper" size={24} color={Colors.secondary} />
+        <Text style={styles.adminItemText}>Hantera nyheter</Text>
+        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+      </TouchableOpacity>
+
+    </View>
+  </View>
+)}
 
         {/* Logout */}
         <View style={styles.section}>
