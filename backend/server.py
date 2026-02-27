@@ -916,8 +916,6 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
-# Include router
-app.include_router(api_router)
 
 # CORS middleware
 app.add_middleware(
@@ -932,3 +930,6 @@ app.add_middleware(
 @api_router.get("/")
 async def root():
     return {"message": "BORKA API", "version": "1.0.0"}
+
+# Include router
+app.include_router(api_router)
