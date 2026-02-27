@@ -1,3 +1,5 @@
+from urllib import response
+
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
@@ -380,6 +382,7 @@ async def email_register(request: EmailRegisterRequest, response: Response):
 
     await db.users.insert_one(new_user)
 
+    # Create session (EN gång)
     session_token = str(uuid.uuid4())
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     session_doc = {
@@ -388,6 +391,9 @@ async def email_register(request: EmailRegisterRequest, response: Response):
         "expires_at": expires_at,
         "created_at": datetime.now(timezone.utc),
     }
+
+    # (bra att rensa gamla sessioner också, valfritt)
+    await db.user_sessions.delete_many({"user_id": user_id})
     await db.user_sessions.insert_one(session_doc)
 
     response.set_cookie(
@@ -401,34 +407,6 @@ async def email_register(request: EmailRegisterRequest, response: Response):
     )
 
     user_response = {k: v for k, v in new_user.items() if k != "password_hash"}
-    logger.info(f"New user registered: {email}")
-    return {"user": user_response, "session_token": session_token}
-    
-    # Create session
-    session_token = str(uuid.uuid4())
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    session_doc = {
-        "session_token": session_token,
-        "user_id": user_id,
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
-    }
-    await db.user_sessions.insert_one(session_doc)
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    # Remove password_hash from response
-    user_response = {k: v for k, v in new_user.items() if k != "password_hash"}
-    
     logger.info(f"New user registered: {email}")
     return {"user": user_response, "session_token": session_token}
 
@@ -557,10 +535,11 @@ async def logout(request: Request, response: Response):
         if auth_header and auth_header.startswith("Bearer "):
             session_token = auth_header.split(" ")[1]
     
-    if session_token:
-        await db.user_sessions.delete_many({"session_token": session_token})
-   
-    return {"message": "Utloggad"}
+if session_token:
+    await db.user_sessions.delete_many({"session_token": session_token})
+
+response.delete_cookie(key="session_token", path="/")
+return {"message": "Utloggad"}
 
 # ==================== USER ENDPOINTS ====================
 
@@ -947,6 +926,9 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+app = FastAPI()
+api_router = APIRouter(prefix="/api")
 
 ALLOWED_ORIGINS = [
     "https://emergent-app-zeta.vercel.app",
