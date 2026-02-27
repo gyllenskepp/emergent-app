@@ -198,39 +198,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   
   checkAuth: async () => {
-    try {
-      set({ isLoading: true });
-      
-      const storedToken = await AsyncStorage.getItem('session_token');
-      
-      if (!storedToken) {
-        set({ isLoading: false, isAuthenticated: false });
-        return;
-      }
-      
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { 'Authorization': `Bearer ${storedToken}` },
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        await AsyncStorage.removeItem('session_token');
-        set({ isLoading: false, isAuthenticated: false });
-        return;
-      }
-      
-      const user = await response.json();
-      
-      set({
-        user,
-        sessionToken: storedToken,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch (error) {
-      console.error('Check auth error:', error);
-      set({ isLoading: false, isAuthenticated: false });
+  try {
+    set({ isLoading: true });
+
+    const storedToken = await AsyncStorage.getItem('session_token');
+
+    if (!storedToken) {
+      set({ isLoading: false, isAuthenticated: false, user: null });
+      return;
     }
+
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${storedToken}` },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      await AsyncStorage.removeItem('session_token');
+      set({ isLoading: false, isAuthenticated: false, user: null });
+      return;
+    }
+
+    const user = await response.json();
+
+    if (!user || !user.user_id) {
+      await AsyncStorage.removeItem('session_token');
+      set({ isLoading: false, isAuthenticated: false, user: null });
+      return;
+    }
+
+    set({
+      user,
+      sessionToken: storedToken,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+
+  } catch (error) {
+    console.error('Check auth error:', error);
+    await AsyncStorage.removeItem('session_token');
+    set({ isLoading: false, isAuthenticated: false, user: null });
+  }
   },
   
   updateUser: async (updates: Partial<User>) => {
