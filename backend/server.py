@@ -304,48 +304,55 @@ class EmailRegisterRequest(BaseModel):
 async def email_login(request: EmailLoginRequest, response: Response):
     """Login with email and password"""
     user = await db.users.find_one({"email": request.email.lower()}, {"_id": 0})
-    
+
     if not user:
         raise HTTPException(status_code=401, detail="Fel e-post eller lösenord")
-    
-    # Check if user has a password (email auth user)
+
     if not user.get("password_hash"):
         raise HTTPException(status_code=401, detail="Detta konto använder Google-inloggning")
-    
+
     if not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Fel e-post eller lösenord")
-    
-        # Create session
-        session_token = str(uuid.uuid4())
-        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-        session_doc = {
-            "session_token": session_token,
-            "user_id": user["user_id"],
-            "expires_at": expires_at,
-            "created_at": datetime.now(timezone.utc)
-        }
-        
-        # Remove old sessions
-        await db.user_sessions.delete_many({"user_id": user["user_id"]})
-        await db.user_sessions.insert_one(session_doc)
-        
-        # Remove password_hash from response
-        user_response = {k: v for k, v in user.items() if k != "password_hash"}
-        
-        logger.info(f"User logged in: {request.email}")
-        return {"user": user_response, "session_token": session_token}
-    
-    @api_router.post("/auth/register")
-    async def email_register(request: EmailRegisterRequest, response: Response):
-        """Register with email and password"""
-        email = request.email.lower().strip()
-    
-    # Check if user exists
+
+    # Create session
+    session_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    session_doc = {
+        "session_token": session_token,
+        "user_id": user["user_id"],
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    # Remove old sessions
+    await db.user_sessions.delete_many({"user_id": user["user_id"]})
+    await db.user_sessions.insert_one(session_doc)
+
+    # (Valfritt) cookie – funkar om CORS är rätt
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60,
+    )
+
+    user_response = {k: v for k, v in user.items() if k != "password_hash"}
+    logger.info(f"User logged in: {request.email}")
+    return {"user": user_response, "session_token": session_token}
+
+
+@api_router.post("/auth/register")
+async def email_register(request: EmailRegisterRequest, response: Response):
+    """Register with email and password"""
+    email = request.email.lower().strip()
+
     existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="E-postadressen är redan registrerad")
-    
-    # Create user
+
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     new_user = {
         "user_id": user_id,
@@ -363,14 +370,39 @@ async def email_login(request: EmailLoginRequest, response: Response):
                 "member_night": False,
                 "tournament": False,
                 "special_event": False,
-                "news": False
+                "news": False,
             },
-            "reminder_times": ["24h"]
+            "reminder_times": ["24h"],
         },
         "push_token": None,
-        "created_at": datetime.now(timezone.utc)
+        "created_at": datetime.now(timezone.utc),
     }
+
     await db.users.insert_one(new_user)
+
+    session_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    session_doc = {
+        "session_token": session_token,
+        "user_id": user_id,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.user_sessions.insert_one(session_doc)
+
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60,
+    )
+
+    user_response = {k: v for k, v in new_user.items() if k != "password_hash"}
+    logger.info(f"New user registered: {email}")
+    return {"user": user_response, "session_token": session_token}
     
     # Create session
     session_token = str(uuid.uuid4())
@@ -916,12 +948,18 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
+ALLOWED_ORIGINS = [
+    "https://emergent-app-zeta.vercel.app",
+    "https://emergent-app-git-main-ecomgoldenship-7389s-projects.vercel.app",
+    "http://localhost:19006",
+    "http://localhost:5173",
+]
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
