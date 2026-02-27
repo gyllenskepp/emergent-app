@@ -315,40 +315,30 @@ async def email_login(request: EmailLoginRequest, response: Response):
     if not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Fel e-post eller lösenord")
     
-    # Create session
-    session_token = str(uuid.uuid4())
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    session_doc = {
-        "session_token": session_token,
-        "user_id": user["user_id"],
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
-    }
+        # Create session
+        session_token = str(uuid.uuid4())
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        session_doc = {
+            "session_token": session_token,
+            "user_id": user["user_id"],
+            "expires_at": expires_at,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Remove old sessions
+        await db.user_sessions.delete_many({"user_id": user["user_id"]})
+        await db.user_sessions.insert_one(session_doc)
+        
+        # Remove password_hash from response
+        user_response = {k: v for k, v in user.items() if k != "password_hash"}
+        
+        logger.info(f"User logged in: {request.email}")
+        return {"user": user_response, "session_token": session_token}
     
-    # Remove old sessions
-    await db.user_sessions.delete_many({"user_id": user["user_id"]})
-    await db.user_sessions.insert_one(session_doc)
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    # Remove password_hash from response
-    user_response = {k: v for k, v in user.items() if k != "password_hash"}
-    
-    logger.info(f"User logged in: {request.email}")
-    return {"user": user_response, "session_token": session_token}
-
-
-    """Register with email and password"""
-    email = request.email.lower().strip()
+    @api_router.post("/auth/register")
+    async def email_register(request: EmailRegisterRequest, response: Response):
+        """Register with email and password"""
+        email = request.email.lower().strip()
     
     # Check if user exists
     existing = await db.users.find_one({"email": email})
@@ -530,10 +520,14 @@ async def get_me(request: Request):
 async def logout(request: Request, response: Response):
     """Logout and clear session"""
     session_token = request.cookies.get("session_token")
+    if not session_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            session_token = auth_header.split(" ")[1]
+    
     if session_token:
         await db.user_sessions.delete_many({"session_token": session_token})
-    
-    response.delete_cookie(key="session_token", path="/")
+   
     return {"message": "Utloggad"}
 
 # ==================== USER ENDPOINTS ====================

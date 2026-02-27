@@ -1,0 +1,82 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from '../../src/components/Button';
+import { useAuthStore } from '../../src/stores/authStore';
+import { Colors } from '../../src/constants/colors';
+
+export default function AdminMembersScreen() {
+  const { createUserAsAdmin } = useAuthStore();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleCreate = async () => {
+    if (!name.trim() || !email.trim()) {
+      Alert.alert('Fel', 'Fyll i namn och email');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await createUserAsAdmin({ name, email });
+
+      Alert.alert('Klart!', 'Medlem skapad 🎉');
+      setName('');
+      setEmail('');
+    } catch (e: any) {
+      Alert.alert('Fel', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Skapa medlem</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Namn"
+        value={name}
+        onChangeText={setName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="E-post"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+      />
+
+      <Button
+        title="Skapa konto"
+        onPress={handleCreate}
+        loading={loading}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: Colors.background,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: Colors.text,
+  },
+  input: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    color: Colors.text,
+  },
+});

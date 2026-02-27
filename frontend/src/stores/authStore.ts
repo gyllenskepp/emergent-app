@@ -283,7 +283,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  createUserAsAdmin: async ({ email, name, role = 'member' }) => {
+  createUserAsAdmin: async ({ email, name, role = 'member' }: { email: string; name: string; role?: 'member' | 'admin' }) => {
   try {
     const { sessionToken } = get();
     if (!sessionToken) throw new Error('Inte inloggad');
