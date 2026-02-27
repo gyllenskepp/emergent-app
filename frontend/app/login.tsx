@@ -46,12 +46,6 @@ export default function LoginScreen() {
         
         <View style={styles.buttonContainer}>
           <Button
-            title="Logga in med Google"
-            onPress={handleLogin}
-            icon={<Ionicons name="logo-google" size={20} color={Colors.textLight} />}
-          />
-          
-          <Button
             title="Fortsätt utan konto"
             variant="outline"
             onPress={() => router.replace('/(tabs)')}
