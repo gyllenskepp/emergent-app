@@ -162,16 +162,6 @@ const handleEmailAuth = async () => {
 
               {/* Email Form */}
               <View style={styles.formContainer}>
-                {authMode === 'register' && (
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Namn"
-                    placeholderTextColor={Colors.textMuted}
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                  />
-                )}
                 <TextInput
                   style={styles.input}
                   placeholder="E-postadress"
@@ -207,7 +197,6 @@ const handleEmailAuth = async () => {
                 <Text style={styles.adminHint}>
                   Kontakta admin för konto.
                 </Text>
-                )}
               </View>
             </View>
           </ScrollView>
