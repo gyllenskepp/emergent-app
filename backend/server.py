@@ -534,12 +534,12 @@ async def logout(request: Request, response: Response):
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             session_token = auth_header.split(" ")[1]
-    
-if session_token:
-    await db.user_sessions.delete_many({"session_token": session_token})
 
-response.delete_cookie(key="session_token", path="/")
-return {"message": "Utloggad"}
+    if session_token:
+        await db.user_sessions.delete_many({"session_token": session_token})
+
+    response.delete_cookie(key="session_token", path="/")
+    return {"message": "Utloggad"}
 
 # ==================== USER ENDPOINTS ====================
 
@@ -583,15 +583,19 @@ async def update_push_token(request: Request):
 class AdminCreateUser(BaseModel):
     email: str
     name: str
+    password: str
     role: Optional[str] = "member"  # member | admin
 
 
 @api_router.post("/admin/users")
 async def admin_create_user(request: Request, body: AdminCreateUser):
-    """Admin creates a member account (no password yet)"""
+    """Admin creates a member account with a password"""
     admin = await require_admin(request)
 
     email = body.email.lower().strip()
+
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Lösenordet måste vara minst 6 tecken")
 
     # Check existing
     existing = await db.users.find_one({"email": email})
@@ -604,10 +608,11 @@ async def admin_create_user(request: Request, body: AdminCreateUser):
         "user_id": user_id,
         "email": email,
         "name": body.name,
+        "password_hash": hash_password(body.password),
         "picture": None,
         "role": body.role,
         "phone": None,
-        "auth_type": "admin_created",
+        "auth_type": "email",
         "notification_preferences": {
             "enabled": False,
             "categories": {
@@ -627,7 +632,7 @@ async def admin_create_user(request: Request, body: AdminCreateUser):
 
     logger.info(f"Admin {admin.email} created user {email}")
 
-    return {"message": "User created", "user_id": user_id}
+    return {"message": "Konto skapat", "user_id": user_id}
 
 @api_router.get("/admin/users")
 async def admin_list_users(request: Request):

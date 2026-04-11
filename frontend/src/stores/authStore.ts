@@ -277,7 +277,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  createUserAsAdmin: async ({ email, name, role = 'member' }: { email: string; name: string; role?: 'member' | 'admin' }) => {
+  createUserAsAdmin: async ({ email, name, password, role = 'member' }: { email: string; name: string; password: string; role?: 'member' | 'admin' }) => {
   try {
     const { sessionToken } = get();
     if (!sessionToken) throw new Error('Inte inloggad');
@@ -288,7 +288,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${sessionToken}`,
       },
-      body: JSON.stringify({ email, name, role }),
+      body: JSON.stringify({ email, name, password, role }),
       credentials: 'include',
     });
 

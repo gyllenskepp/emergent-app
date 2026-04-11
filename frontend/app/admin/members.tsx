@@ -37,6 +37,7 @@ export default function AdminMembersScreen() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
   const [submitting, setSubmitting] = useState(false);
 
@@ -61,16 +62,21 @@ export default function AdminMembersScreen() {
   }, []);
 
   const handleCreate = async () => {
-    if (!name.trim() || !email.trim()) {
-      Alert.alert('Fel', 'Fyll i namn och e-post');
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Fel', 'Fyll i namn, e-post och lösenord');
+      return;
+    }
+    if (password.trim().length < 6) {
+      Alert.alert('Fel', 'Lösenordet måste vara minst 6 tecken');
       return;
     }
     setSubmitting(true);
     try {
-      await createUserAsAdmin({ name: name.trim(), email: email.trim(), role });
-      Alert.alert('Klart!', 'Medlem skapad');
+      await createUserAsAdmin({ name: name.trim(), email: email.trim(), password: password.trim(), role });
+      Alert.alert('Klart!', 'Konto skapat! Medlemmen kan nu logga in.');
       setName('');
       setEmail('');
+      setPassword('');
       setRole('member');
       setShowForm(false);
       fetchMembers();
@@ -150,6 +156,14 @@ export default function AdminMembersScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Lösenord (minst 6 tecken)"
+              placeholderTextColor={Colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
             />
             {/* Role picker */}
             <View style={styles.roleRow}>

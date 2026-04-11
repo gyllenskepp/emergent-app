@@ -112,23 +112,25 @@ const handleEmailAuth = async () => {
   };
 
   const handleSubscribeCalendar = () => {
+    const icsUrl = `${API_URL}/api/calendar/ics`;
+    const webcalUrl = icsUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
+    const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsUrl)}`;
+
     Alert.alert(
       'Prenumerera på kalendern',
-      'Välj hur du vill prenumerera:',
+      'Alla BORKA-event läggs till automatiskt och hålls uppdaterade.',
       [
         {
-          text: 'Apple Kalender (iPhone)',
-          onPress: () => {
-            const webcalUrl = `${API_URL}/api/calendar/ics`.replace('https://', 'webcal://').replace('http://', 'webcal://');
-            Linking.openURL(webcalUrl);
-          },
+          text: 'iPhone (Apple Kalender)',
+          onPress: () => Linking.openURL(webcalUrl),
         },
         {
-          text: 'Google Kalender',
-          onPress: () => {
-            const icsUrl = encodeURIComponent(`${API_URL}/api/calendar/ics`);
-            Linking.openURL(`https://calendar.google.com/calendar/r?cid=${icsUrl}`);
-          },
+          text: 'Android (Google Kalender)',
+          onPress: () => Linking.openURL(googleUrl),
+        },
+        {
+          text: 'Annan kalender-app',
+          onPress: () => Linking.openURL(webcalUrl),
         },
         { text: 'Avbryt', style: 'cancel' },
       ]
