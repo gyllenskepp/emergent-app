@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#E63946"
+        "backgroundColor": "#3C888F"
       },
       "edgeToEdgeEnabled": true,
       "package": "se.borkasandviken.app",
@@ -37,14 +37,14 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#F8F9FA"
+          "backgroundColor": "#3C888F"
         }
       ],
       [
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#E63946"
+          "color": "#3C888F"
         }
       ]
     ],
