@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Platform } from 'react-native';
-
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL ||
-  (Platform.OS === 'web' ? '' : 'https://borka-mobile-dev.preview.emergentagent.com');
+  'https://borka-mobile-dev.preview.emergentagent.com';
 
 export interface Event {
   id: string;

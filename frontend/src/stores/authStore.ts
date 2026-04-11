@@ -1,18 +1,12 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
-// Get API URL:
-//   - If EXPO_PUBLIC_BACKEND_URL is set (local dev / EAS build), use it
-//   - Web without env var: '' (Vercel proxy forwards /api/* to backend)
-//   - Native without env var: hardcoded backend URL
+// API base URL — EXPO_PUBLIC_BACKEND_URL overrides (local dev / EAS builds).
+// Falls back to the known backend for both web and native.
 const getApiUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (envUrl && envUrl.length > 0) {
     return envUrl;
-  }
-  if (Platform.OS === 'web') {
-    return '';
   }
   return 'https://borka-mobile-dev.preview.emergentagent.com';
 };
@@ -88,11 +82,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
-      
-      console.log('[Auth] Response status:', response.status);
-      
+
+      console.log('[Auth] Response status:', response.status, 'URL:', loginUrl);
+
       if (!response.ok) {
-        let errorMessage = 'Inloggning misslyckades';
+        let errorMessage = `Inloggning misslyckades (${response.status})`;
         try {
           const data = await response.json();
           errorMessage = data.detail || errorMessage;
