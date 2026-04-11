@@ -629,6 +629,27 @@ async def admin_create_user(request: Request, body: AdminCreateUser):
 
     return {"message": "User created", "user_id": user_id}
 
+@api_router.get("/admin/users")
+async def admin_list_users(request: Request):
+    """Admin lists all users"""
+    await require_admin(request)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    return users
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, request: Request):
+    """Admin deletes a user"""
+    admin = await require_admin(request)
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte")
+    if user["user_id"] == admin.user_id:
+        raise HTTPException(status_code=400, detail="Du kan inte ta bort dig själv")
+    await db.users.delete_one({"user_id": user_id})
+    await db.user_sessions.delete_many({"user_id": user_id})
+    logger.info(f"Admin {admin.email} deleted user {user_id}")
+    return {"message": "Användaren borttagen"}
+
 # ==================== EVENTS ENDPOINTS ====================
 
 @api_router.get("/events")
