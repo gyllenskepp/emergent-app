@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnPrimary,
   },
   loginContent: {
     flexGrow: 1,
@@ -393,13 +393,13 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   welcomeText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.textOnPrimaryMuted,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   adminHint: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: Colors.textOnPrimaryMuted,
     textAlign: 'center',
     marginTop: 12,
   },

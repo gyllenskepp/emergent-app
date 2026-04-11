@@ -20,10 +20,12 @@ export const Colors = {
   surfaceSecondary: '#F1F3F5', // Secondary surface
   
   // Text
-  text: '#1D3557',          // Dark blue text
-  textSecondary: '#6C757D', // Gray text
-  textLight: '#FFFFFF',     // White text
-  textMuted: '#ADB5BD',     // Muted text
+  text: '#1D3557',               // Dark blue text (on white cards)
+  textSecondary: '#6C757D',      // Gray text (on white cards)
+  textLight: '#FFFFFF',          // White text
+  textMuted: '#ADB5BD',          // Muted text (on white cards)
+  textOnPrimary: '#FFFFFF',                    // White — text directly on teal background
+  textOnPrimaryMuted: 'rgba(255,255,255,0.75)', // Subtle white — secondary text on teal
   
   // Borders and dividers
   border: '#DEE2E6',

@@ -20,13 +20,7 @@ const getApiUrl = () => {
     return baseUrl;
   }
   
-  // For web, relative paths work due to proxy
-  if (Platform.OS === 'web') {
-    console.log('[Auth] Using relative URL for web');
-    return '';
-  }
-  
-  // Fallback - use the known preview URL
+  // Fallback - use the known backend URL (works for both native and web)
   const fallbackUrl = 'https://borka-mobile-dev.preview.emergentagent.com';
   console.log('[Auth] Using fallback URL:', fallbackUrl);
   return fallbackUrl;
