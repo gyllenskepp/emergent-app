@@ -71,8 +71,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   loginWithEmail: async (email: string, password: string) => {
     try {
-      set({ isLoading: true, error: null });
-      
+      set({ error: null });
+
       const loginUrl = `${API_URL}/api/auth/login`;
       console.log('[Auth] Attempting login to:', loginUrl);
       
@@ -105,12 +105,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: data.user,
         sessionToken: data.session_token,
         isAuthenticated: true,
-        isLoading: false,
         error: null,
       });
     } catch (error: any) {
       console.error('[Auth] Login error:', error.message);
-      set({ isLoading: false, isAuthenticated: false, error: error.message });
+      set({ isAuthenticated: false, error: error.message });
       throw error;
     }
   },
@@ -121,7 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   login: async (sessionId: string) => {
     try {
-      set({ isLoading: true, error: null });
+      set({ error: null });
       
       const response = await fetch(`${API_URL}/api/auth/session`, {
         method: 'POST',
