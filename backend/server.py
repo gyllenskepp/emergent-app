@@ -206,8 +206,8 @@ async def seed_database():
     
     # Seed admin user with password
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@borka.se")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "borka2024")
-    
+    admin_password = os.environ.get("ADMIN_PASSWORD", "asdqwe123")
+
     existing_admin = await db.users.find_one({"email": admin_email})
     if not existing_admin:
         admin_user = {
@@ -234,8 +234,15 @@ async def seed_database():
             "created_at": datetime.now(timezone.utc)
         }
         await db.users.insert_one(admin_user)
-        logger.info(f"Created admin user: {admin_email} with password: {admin_password}")
-    
+        logger.info(f"Created admin user: {admin_email}")
+    else:
+        # Always sync the password from env so changes take effect on restart
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"password_hash": hash_password(admin_password), "role": "admin"}}
+        )
+        logger.info(f"Updated admin password for: {admin_email}")
+
     # Seed some sample events
     existing_events = await db.events.count_documents({})
     if existing_events == 0:
