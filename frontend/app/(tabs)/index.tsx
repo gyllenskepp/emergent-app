@@ -48,10 +48,11 @@ export default function HomeScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroContent}>
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="dice" size={48} color={Colors.primary} />
-            </View>
-            <Text style={styles.heroTitle}>BORKA</Text>
+            <Image
+              source={require('../../assets/images/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.heroSubtitle}>Brädspel & Rollspel i Sandviken</Text>
           </View>
         </View>
@@ -180,34 +181,32 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     backgroundColor: Colors.surface,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heroContent: {
     alignItems: 'center',
   },
-  logoPlaceholder: {
-    width: 80,
+  logoImage: {
+    width: 220,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.surfaceSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: 2,
+    marginBottom: 12,
   },
   heroSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   infoCardsContainer: {
     flexDirection: 'row',
