@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Switch,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +35,8 @@ export default function AdminEventsScreen() {
     end_time: new Date().toISOString(),
     category: 'open_game_night',
   });
+  const [recurring, setRecurring] = useState(false);
+  const [recurringWeeks, setRecurringWeeks] = useState('4');
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -51,7 +54,7 @@ export default function AdminEventsScreen() {
     start.setHours(18, 0, 0, 0);
     const end = new Date(now);
     end.setHours(21, 30, 0, 0);
-    
+
     setFormData({
       title: '',
       description: '',
@@ -60,6 +63,8 @@ export default function AdminEventsScreen() {
       end_time: end.toISOString(),
       category: 'open_game_night',
     });
+    setRecurring(false);
+    setRecurringWeeks('4');
     setModalVisible(true);
   };
 
@@ -86,6 +91,18 @@ export default function AdminEventsScreen() {
       if (editingEvent) {
         await updateEvent(editingEvent.id, formData);
         Alert.alert('Klart', 'Event uppdaterat');
+      } else if (recurring) {
+        const weeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || 4));
+        const startBase = new Date(formData.start_time);
+        const endBase = new Date(formData.end_time);
+        for (let i = 0; i < weeks; i++) {
+          const start = new Date(startBase);
+          start.setDate(start.getDate() + i * 7);
+          const end = new Date(endBase);
+          end.setDate(end.getDate() + i * 7);
+          await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString() });
+        }
+        Alert.alert('Klart', `${weeks} återkommande event skapade`);
       } else {
         await createEvent(formData);
         Alert.alert('Klart', 'Event skapat');
@@ -259,6 +276,39 @@ export default function AdminEventsScreen() {
               placeholder="2025-01-15 21:30"
               placeholderTextColor={Colors.textMuted}
             />
+
+            {!editingEvent && (
+              <>
+                <View style={styles.recurringRow}>
+                  <Text style={styles.label}>Återkommande (varje vecka)</Text>
+                  <Switch
+                    value={recurring}
+                    onValueChange={setRecurring}
+                    trackColor={{ false: Colors.border, true: Colors.primary }}
+                    thumbColor={Colors.surface}
+                  />
+                </View>
+
+                {recurring && (
+                  <>
+                    <Text style={styles.label}>Antal veckor</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={recurringWeeks}
+                      onChangeText={setRecurringWeeks}
+                      keyboardType="number-pad"
+                      placeholder="4"
+                      placeholderTextColor={Colors.textMuted}
+                    />
+                    <Text style={styles.recurringHint}>
+                      Skapar {Math.max(1, Math.min(52, parseInt(recurringWeeks) || 4))} event med start från valt datum, ett per vecka.
+                    </Text>
+                  </>
+                )}
+              </>
+            )}
+
+            <View style={styles.bottomSpacer} />
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -364,7 +414,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.textOnPrimary,
   },
   modalTitle: {
     fontSize: 18,
@@ -417,5 +467,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
+  },
+  recurringRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  recurringHint: {
+    fontSize: 13,
+    color: Colors.textOnPrimaryMuted,
+    marginTop: 8,
+    lineHeight: 18,
   },
 });
