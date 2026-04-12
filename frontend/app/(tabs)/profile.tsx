@@ -64,20 +64,19 @@ const handleEmailAuth = async () => {
 };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logga ut',
-      'Är du säker på att du vill logga ut?',
-      [
-        { text: 'Avbryt', style: 'cancel' },
-        {
-          text: 'Logga ut',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-          },
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Är du säker på att du vill logga ut?')) return;
+      await logout();
+    } else {
+      Alert.alert(
+        'Logga ut',
+        'Är du säker på att du vill logga ut?',
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          { text: 'Logga ut', style: 'destructive', onPress: async () => { await logout(); } },
+        ]
+      );
+    }
   };
 
   const toggleNotifications = async (value: boolean) => {
@@ -116,25 +115,20 @@ const handleEmailAuth = async () => {
     const webcalUrl = icsUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
     const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsUrl)}`;
 
-    Alert.alert(
-      'Prenumerera på kalendern',
-      'Alla BORKA-event läggs till automatiskt och hålls uppdaterade.',
-      [
-        {
-          text: 'iPhone (Apple Kalender)',
-          onPress: () => Linking.openURL(webcalUrl),
-        },
-        {
-          text: 'Android (Google Kalender)',
-          onPress: () => Linking.openURL(googleUrl),
-        },
-        {
-          text: 'Annan kalender-app',
-          onPress: () => Linking.openURL(webcalUrl),
-        },
-        { text: 'Avbryt', style: 'cancel' },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      Linking.openURL(googleUrl);
+    } else {
+      Alert.alert(
+        'Prenumerera på kalendern',
+        'Alla BORKA-event läggs till automatiskt och hålls uppdaterade.',
+        [
+          { text: 'iPhone (Apple Kalender)', onPress: () => Linking.openURL(webcalUrl) },
+          { text: 'Android (Google Kalender)', onPress: () => Linking.openURL(googleUrl) },
+          { text: 'Annan kalender-app', onPress: () => Linking.openURL(webcalUrl) },
+          { text: 'Avbryt', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   if (!isAuthenticated) {
