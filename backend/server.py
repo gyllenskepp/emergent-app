@@ -960,9 +960,6 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
-app = FastAPI()
-api_router = APIRouter(prefix="/api")
-
 ALLOWED_ORIGINS = [
     "https://emergent-app-zeta.vercel.app",
     "https://emergent-app-git-main-ecomgoldenship-7389s-projects.vercel.app",
