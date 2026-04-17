@@ -101,7 +101,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'include',
       });
       
       console.log('[Auth] Response status:', response.status);
@@ -148,7 +147,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
-        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -179,7 +177,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {},
-        credentials: 'include',
       });
       
       await AsyncStorage.removeItem('session_token');
@@ -210,7 +207,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const response = await fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${storedToken}` },
-      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -252,7 +248,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify(updates),
-        credentials: 'include',
       });
       
       if (!response.ok) throw new Error('Update failed');
@@ -276,7 +271,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({ push_token: token }),
-        credentials: 'include',
       });
     } catch (error) {
       console.error('Update push token error:', error);
@@ -295,7 +289,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         'Authorization': `Bearer ${sessionToken}`,
       },
       body: JSON.stringify({ email, name, role }),
-      credentials: 'include',
     });
 
     if (!response.ok) {
