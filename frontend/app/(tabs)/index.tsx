@@ -199,9 +199,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 220,
-    height: 80,
-    marginBottom: 12,
+    width: 160,
+    height: 160,
+    marginBottom: 8,
   },
   heroSubtitle: {
     fontSize: 15,
