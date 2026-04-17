@@ -64,20 +64,19 @@ const handleEmailAuth = async () => {
 };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logga ut',
-      'Är du säker på att du vill logga ut?',
-      [
-        { text: 'Avbryt', style: 'cancel' },
-        {
-          text: 'Logga ut',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-          },
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Är du säker på att du vill logga ut?')) return;
+      await logout();
+    } else {
+      Alert.alert(
+        'Logga ut',
+        'Är du säker på att du vill logga ut?',
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          { text: 'Logga ut', style: 'destructive', onPress: async () => { await logout(); } },
+        ]
+      );
+    }
   };
 
   const toggleNotifications = async (value: boolean) => {
@@ -112,27 +111,24 @@ const handleEmailAuth = async () => {
   };
 
   const handleSubscribeCalendar = () => {
-    Alert.alert(
-      'Prenumerera på kalendern',
-      'Välj hur du vill prenumerera:',
-      [
-        {
-          text: 'Apple Kalender (iPhone)',
-          onPress: () => {
-            const webcalUrl = `${API_URL}/api/calendar/ics`.replace('https://', 'webcal://').replace('http://', 'webcal://');
-            Linking.openURL(webcalUrl);
-          },
-        },
-        {
-          text: 'Google Kalender',
-          onPress: () => {
-            const icsUrl = encodeURIComponent(`${API_URL}/api/calendar/ics`);
-            Linking.openURL(`https://calendar.google.com/calendar/r?cid=${icsUrl}`);
-          },
-        },
-        { text: 'Avbryt', style: 'cancel' },
-      ]
-    );
+    const icsUrl = `${API_URL}/api/calendar/ics`;
+    const webcalUrl = icsUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
+    const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsUrl)}`;
+
+    if (Platform.OS === 'web') {
+      Linking.openURL(googleUrl);
+    } else {
+      Alert.alert(
+        'Prenumerera på kalendern',
+        'Alla BORKA-event läggs till automatiskt och hålls uppdaterade.',
+        [
+          { text: 'iPhone (Apple Kalender)', onPress: () => Linking.openURL(webcalUrl) },
+          { text: 'Android (Google Kalender)', onPress: () => Linking.openURL(googleUrl) },
+          { text: 'Annan kalender-app', onPress: () => Linking.openURL(webcalUrl) },
+          { text: 'Avbryt', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   if (!isAuthenticated) {
@@ -370,7 +366,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnPrimary,
   },
   loginContent: {
     flexGrow: 1,
@@ -393,13 +389,13 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   welcomeText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.textOnPrimaryMuted,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -443,7 +439,7 @@ const styles = StyleSheet.create({
   },
   adminHint: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: Colors.textOnPrimaryMuted,
     textAlign: 'center',
     marginTop: 12,
   },

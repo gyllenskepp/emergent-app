@@ -1,29 +1,31 @@
 // BORKA Color Palette - Based on website branding
 export const Colors = {
   // Primary colors
-  primary: '#E63946',      // Warm red - main accent
-  primaryDark: '#C1121F',  // Darker red for pressed states
-  
+  primary: '#3C888F',      // Teal - main brand color (CMYK 72/37/33.5/15.5)
+  primaryDark: '#2A6068',  // Darker teal for pressed states
+
   // Secondary colors
   secondary: '#457B9D',    // Blue accent
   secondaryLight: '#A8DADC', // Light blue
-  
+
   // Category colors
-  openGameNight: '#E63946',   // Red
+  openGameNight: '#3C888F',   // Teal (brand primary)
   memberNight: '#457B9D',      // Blue
-  tournament: '#2A9D8F',       // Teal
+  tournament: '#2A9D8F',       // Teal variant
   specialEvent: '#F4A261',     // Orange
-  
+
   // Neutrals
-  background: '#F8F9FA',    // Light gray background
+  background: '#3C888F',    // Teal brand background (CMYK 72/37/33.5/15.5)
   surface: '#FFFFFF',       // White cards
   surfaceSecondary: '#F1F3F5', // Secondary surface
   
   // Text
-  text: '#1D3557',          // Dark blue text
-  textSecondary: '#6C757D', // Gray text
-  textLight: '#FFFFFF',     // White text
-  textMuted: '#ADB5BD',     // Muted text
+  text: '#1D3557',               // Dark blue text (on white cards)
+  textSecondary: '#6C757D',      // Gray text (on white cards)
+  textLight: '#FFFFFF',          // White text
+  textMuted: '#ADB5BD',          // Muted text (on white cards)
+  textOnPrimary: '#FFFFFF',                    // White — text directly on teal background
+  textOnPrimaryMuted: 'rgba(255,255,255,0.75)', // Subtle white — secondary text on teal
   
   // Borders and dividers
   border: '#DEE2E6',
@@ -32,7 +34,7 @@ export const Colors = {
   // States
   success: '#2A9D8F',
   warning: '#F4A261',
-  error: '#E63946',
+  error: '#C0392B',
   info: '#457B9D',
   
   // Shadows

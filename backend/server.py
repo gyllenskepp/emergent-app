@@ -206,8 +206,8 @@ async def seed_database():
     
     # Seed admin user with password
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@borka.se")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "borka2024")
-    
+    admin_password = os.environ.get("ADMIN_PASSWORD", "asdqwe123")
+
     existing_admin = await db.users.find_one({"email": admin_email})
     if not existing_admin:
         admin_user = {
@@ -234,8 +234,15 @@ async def seed_database():
             "created_at": datetime.now(timezone.utc)
         }
         await db.users.insert_one(admin_user)
-        logger.info(f"Created admin user: {admin_email} with password: {admin_password}")
-    
+        logger.info(f"Created admin user: {admin_email}")
+    else:
+        # Always sync the password from env so changes take effect on restart
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"password_hash": hash_password(admin_password), "role": "admin"}}
+        )
+        logger.info(f"Updated admin password for: {admin_email}")
+
     # Seed some sample events
     existing_events = await db.events.count_documents({})
     if existing_events == 0:
@@ -534,12 +541,12 @@ async def logout(request: Request, response: Response):
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             session_token = auth_header.split(" ")[1]
-    
-if session_token:
-    await db.user_sessions.delete_many({"session_token": session_token})
 
-response.delete_cookie(key="session_token", path="/")
-return {"message": "Utloggad"}
+    if session_token:
+        await db.user_sessions.delete_many({"session_token": session_token})
+
+    response.delete_cookie(key="session_token", path="/")
+    return {"message": "Utloggad"}
 
 # ==================== USER ENDPOINTS ====================
 
@@ -583,15 +590,19 @@ async def update_push_token(request: Request):
 class AdminCreateUser(BaseModel):
     email: str
     name: str
+    password: str
     role: Optional[str] = "member"  # member | admin
 
 
 @api_router.post("/admin/users")
 async def admin_create_user(request: Request, body: AdminCreateUser):
-    """Admin creates a member account (no password yet)"""
+    """Admin creates a member account with a password"""
     admin = await require_admin(request)
 
     email = body.email.lower().strip()
+
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Lösenordet måste vara minst 6 tecken")
 
     # Check existing
     existing = await db.users.find_one({"email": email})
@@ -604,10 +615,11 @@ async def admin_create_user(request: Request, body: AdminCreateUser):
         "user_id": user_id,
         "email": email,
         "name": body.name,
+        "password_hash": hash_password(body.password),
         "picture": None,
         "role": body.role,
         "phone": None,
-        "auth_type": "admin_created",
+        "auth_type": "email",
         "notification_preferences": {
             "enabled": False,
             "categories": {
@@ -627,7 +639,28 @@ async def admin_create_user(request: Request, body: AdminCreateUser):
 
     logger.info(f"Admin {admin.email} created user {email}")
 
-    return {"message": "User created", "user_id": user_id}
+    return {"message": "Konto skapat", "user_id": user_id}
+
+@api_router.get("/admin/users")
+async def admin_list_users(request: Request):
+    """Admin lists all users"""
+    await require_admin(request)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    return users
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, request: Request):
+    """Admin deletes a user"""
+    admin = await require_admin(request)
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte")
+    if user["user_id"] == admin.user_id:
+        raise HTTPException(status_code=400, detail="Du kan inte ta bort dig själv")
+    await db.users.delete_one({"user_id": user_id})
+    await db.user_sessions.delete_many({"user_id": user_id})
+    logger.info(f"Admin {admin.email} deleted user {user_id}")
+    return {"message": "Användaren borttagen"}
 
 # ==================== EVENTS ENDPOINTS ====================
 
@@ -927,14 +960,13 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
-app = FastAPI()
-api_router = APIRouter(prefix="/api")
-
 ALLOWED_ORIGINS = [
     "https://emergent-app-zeta.vercel.app",
     "https://emergent-app-git-main-ecomgoldenship-7389s-projects.vercel.app",
     "http://localhost:19006",
     "http://localhost:5173",
+    "http://localhost:8081",
+    "http://localhost:3000",
 ]
 
 # CORS middleware

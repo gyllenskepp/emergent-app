@@ -1,35 +1,14 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
-// Get API URL - for web, use relative path; for native, use the full URL
+// API base URL — EXPO_PUBLIC_BACKEND_URL overrides (local dev / EAS builds).
+// Falls back to the known backend for both web and native.
 const getApiUrl = () => {
-  // Try environment variable first
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (envUrl && envUrl.length > 0) {
-    console.log('[Auth] Using env URL:', envUrl);
     return envUrl;
   }
-  
-  // Try expo config
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const baseUrl = `https://${hostUri.split(':')[0]}`;
-    console.log('[Auth] Using hostUri URL:', baseUrl);
-    return baseUrl;
-  }
-  
-  // For web, relative paths work due to proxy
-  if (Platform.OS === 'web') {
-    console.log('[Auth] Using relative URL for web');
-    return '';
-  }
-  
-  // Fallback - use the known preview URL
-  const fallbackUrl = 'https://borka-mobile-dev.preview.emergentagent.com';
-  console.log('[Auth] Using fallback URL:', fallbackUrl);
-  return fallbackUrl;
+  return 'https://borka-mobile-dev.preview.emergentagent.com';
 };
 
 const API_URL = getApiUrl();
@@ -92,8 +71,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   loginWithEmail: async (email: string, password: string) => {
     try {
-      set({ isLoading: true, error: null });
-      
+      set({ error: null });
+
       const loginUrl = `${API_URL}/api/auth/login`;
       console.log('[Auth] Attempting login to:', loginUrl);
       
@@ -101,12 +80,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-      
-      console.log('[Auth] Response status:', response.status);
-      
+
+      console.log('[Auth] Response status:', response.status, 'URL:', loginUrl);
+
       if (!response.ok) {
-        let errorMessage = 'Inloggning misslyckades';
+        let errorMessage = `Inloggning misslyckades (${response.status})`;
         try {
           const data = await response.json();
           errorMessage = data.detail || errorMessage;
@@ -125,12 +105,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: data.user,
         sessionToken: data.session_token,
         isAuthenticated: true,
-        isLoading: false,
         error: null,
       });
     } catch (error: any) {
       console.error('[Auth] Login error:', error.message);
-      set({ isLoading: false, isAuthenticated: false, error: error.message });
+      set({ isAuthenticated: false, error: error.message });
       throw error;
     }
   },
@@ -141,12 +120,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   login: async (sessionId: string) => {
     try {
-      set({ isLoading: true, error: null });
+      set({ error: null });
       
       const response = await fetch(`${API_URL}/api/auth/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -177,6 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {},
+        credentials: 'include',
       });
       
       await AsyncStorage.removeItem('session_token');
@@ -207,6 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const response = await fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${storedToken}` },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -248,6 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify(updates),
+        credentials: 'include',
       });
       
       if (!response.ok) throw new Error('Update failed');
@@ -271,13 +254,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           'Authorization': `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({ push_token: token }),
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Update push token error:', error);
     }
   },
   
-  createUserAsAdmin: async ({ email, name, role = 'member' }: { email: string; name: string; role?: 'member' | 'admin' }) => {
+  createUserAsAdmin: async ({ email, name, password, role = 'member' }: { email: string; name: string; password: string; role?: 'member' | 'admin' }) => {
   try {
     const { sessionToken } = get();
     if (!sessionToken) throw new Error('Inte inloggad');
@@ -288,7 +272,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${sessionToken}`,
       },
-      body: JSON.stringify({ email, name, role }),
+      body: JSON.stringify({ email, name, password, role }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
