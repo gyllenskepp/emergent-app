@@ -11,6 +11,7 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,41 @@ export default function AdminEventsScreen() {
   });
   const [recurring, setRecurring] = useState(false);
   const [recurringWeeks, setRecurringWeeks] = useState('4');
+  const [activePicker, setActivePicker] = useState<{
+    field: 'start_time' | 'end_time';
+    mode: 'date' | 'time';
+  } | null>(null);
+
+  const openDatePicker = (field: 'start_time' | 'end_time') => {
+    setActivePicker({ field, mode: 'date' });
+  };
+
+  const handlePickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!activePicker) return;
+
+    if (event.type === 'dismissed') {
+      setActivePicker(null);
+      return;
+    }
+
+    if (!selectedDate) return;
+
+    if (Platform.OS === 'android') {
+      if (activePicker.mode === 'date') {
+        const existing = new Date(formData[activePicker.field]);
+        selectedDate.setHours(existing.getHours(), existing.getMinutes(), 0, 0);
+        setFormData(prev => ({ ...prev, [activePicker.field]: selectedDate.toISOString() }));
+        setActivePicker({ field: activePicker.field, mode: 'time' });
+      } else {
+        const existing = new Date(formData[activePicker.field]);
+        existing.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+        setFormData(prev => ({ ...prev, [activePicker.field]: existing.toISOString() }));
+        setActivePicker(null);
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [activePicker.field]: selectedDate.toISOString() }));
+    }
+  };
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -245,37 +281,56 @@ export default function AdminEventsScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Starttid (YYYY-MM-DD HH:MM)</Text>
-            <TextInput
-              style={styles.input}
-              value={format(new Date(formData.start_time), 'yyyy-MM-dd HH:mm')}
-              onChangeText={(text) => {
-                try {
-                  const date = new Date(text.replace(' ', 'T'));
-                  if (!isNaN(date.getTime())) {
-                    setFormData({ ...formData, start_time: date.toISOString() });
-                  }
-                } catch (e) {}
-              }}
-              placeholder="2025-01-15 18:00"
-              placeholderTextColor={Colors.textMuted}
-            />
+            <Text style={styles.label}>Starttid</Text>
+            <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('start_time')}>
+              <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
+              <Text style={styles.dateButtonText}>
+                {format(new Date(formData.start_time), 'EEEE d MMM yyyy HH:mm', { locale: sv })}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+            </TouchableOpacity>
 
-            <Text style={styles.label}>Sluttid (YYYY-MM-DD HH:MM)</Text>
-            <TextInput
-              style={styles.input}
-              value={format(new Date(formData.end_time), 'yyyy-MM-dd HH:mm')}
-              onChangeText={(text) => {
-                try {
-                  const date = new Date(text.replace(' ', 'T'));
-                  if (!isNaN(date.getTime())) {
-                    setFormData({ ...formData, end_time: date.toISOString() });
-                  }
-                } catch (e) {}
-              }}
-              placeholder="2025-01-15 21:30"
-              placeholderTextColor={Colors.textMuted}
-            />
+            <Text style={styles.label}>Sluttid</Text>
+            <TouchableOpacity style={styles.dateButton} onPress={() => openDatePicker('end_time')}>
+              <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
+              <Text style={styles.dateButtonText}>
+                {format(new Date(formData.end_time), 'EEEE d MMM yyyy HH:mm', { locale: sv })}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            {/* DateTimePicker — Android: native dialog, iOS: modal with spinner */}
+            {activePicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={new Date(formData[activePicker.field])}
+                mode={activePicker.mode}
+                display="default"
+                onChange={handlePickerChange}
+                locale="sv-SE"
+              />
+            )}
+
+            {activePicker && Platform.OS === 'ios' && (
+              <Modal transparent animationType="slide" visible>
+                <View style={styles.pickerOverlay}>
+                  <View style={styles.pickerSheet}>
+                    <View style={styles.pickerSheetHeader}>
+                      <TouchableOpacity onPress={() => setActivePicker(null)}>
+                        <Text style={styles.pickerDone}>Klar</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={new Date(formData[activePicker.field])}
+                      mode="datetime"
+                      display="spinner"
+                      onChange={handlePickerChange}
+                      locale="sv-SE"
+                      style={styles.iosPicker}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            )}
 
             {!editingEvent && (
               <>
@@ -479,5 +534,46 @@ const styles = StyleSheet.create({
     color: Colors.textOnPrimaryMuted,
     marginTop: 8,
     lineHeight: 18,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  dateButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+  },
+  pickerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  pickerSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 32,
+  },
+  pickerSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  pickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  iosPicker: {
+    backgroundColor: Colors.background,
   },
 });
