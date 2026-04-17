@@ -21,6 +21,30 @@ import { useDataStore, Event, Category } from '../../src/stores/dataStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { Button } from '../../src/components/Button';
 
+function groupEvents(events: Event[]) {
+  const seriesMap = new Map<string, Event[]>();
+  const singles: Event[] = [];
+  for (const e of events) {
+    if (e.series_id) {
+      const arr = seriesMap.get(e.series_id) || [];
+      arr.push(e);
+      seriesMap.set(e.series_id, arr);
+    } else {
+      singles.push(e);
+    }
+  }
+  const result: { id: string; title: string; category: string; start_time: string; seriesCount: number; event: Event; allEvents: Event[] }[] = [];
+  for (const e of singles) {
+    result.push({ id: e.id, title: e.title, category: e.category, start_time: e.start_time, seriesCount: 1, event: e, allEvents: [e] });
+  }
+  for (const [, arr] of seriesMap) {
+    const sorted = arr.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    const first = sorted[0];
+    result.push({ id: first.id, title: first.title, category: first.category, start_time: first.start_time, seriesCount: arr.length, event: first, allEvents: sorted });
+  }
+  return result.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+}
+
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
   const localValue = format(new Date(value), "yyyy-MM-dd'T'HH:mm");
   if (Platform.OS === 'web') {
@@ -116,10 +140,11 @@ export default function AdminEventsScreen() {
         const weeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || 4));
         const startBase = new Date(formData.start_time);
         const endBase = new Date(formData.end_time);
+        const seriesId = `series_${Date.now()}`;
         for (let i = 0; i < weeks; i++) {
           const start = new Date(startBase); start.setDate(start.getDate() + i * 7);
           const end = new Date(endBase); end.setDate(end.getDate() + i * 7);
-          await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString() });
+          await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
         }
         Alert.alert('Klart', `${weeks} återkommande event skapade`);
       } else {
@@ -129,6 +154,24 @@ export default function AdminEventsScreen() {
       setModalVisible(false);
     } catch (error) {
       Alert.alert('Fel', 'Något gick fel');
+    }
+  };
+
+  const handleDeleteItem = (item: ReturnType<typeof groupEvents>[0]) => {
+    const msg = item.seriesCount > 1
+      ? `Ta bort alla ${item.seriesCount} återkommande event för "${item.title}"?`
+      : `Ta bort "${item.title}"?`;
+    const action = item.seriesCount > 1
+      ? async () => { for (const e of item.allEvents) await deleteEvent(e.id); }
+      : async () => { await deleteEvent(item.id); };
+    if (Platform.OS === 'web') {
+      if (!window.confirm(msg)) return;
+      action().catch(() => Alert.alert('Fel', 'Kunde inte ta bort eventet'));
+    } else {
+      Alert.alert('Ta bort event', msg, [
+        { text: 'Avbryt', style: 'cancel' },
+        { text: 'Ta bort', style: 'destructive', onPress: () => action().catch(() => Alert.alert('Fel', 'Kunde inte ta bort eventet')) },
+      ]);
     }
   };
 
@@ -155,19 +198,29 @@ export default function AdminEventsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {events.map((event) => (
-          <View key={event.id} style={styles.eventCard}>
-            <View style={[styles.eventAccent, { backgroundColor: CategoryColors[event.category] || Colors.primary }]} />
+        {groupEvents(events).map((item) => (
+          <View key={item.id} style={styles.eventCard}>
+            <View style={[styles.eventAccent, { backgroundColor: CategoryColors[item.category] || Colors.primary }]} />
             <View style={styles.eventContent}>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <Text style={styles.eventDate}>{format(new Date(event.start_time), 'd MMM yyyy HH:mm', { locale: sv })}</Text>
-              <Text style={styles.eventCategory}>{CategoryNames[event.category]}</Text>
+              <View style={styles.eventTitleRow}>
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                {item.seriesCount > 1 && (
+                  <View style={styles.seriesBadge}>
+                    <Ionicons name="repeat" size={12} color={Colors.textLight} />
+                    <Text style={styles.seriesBadgeText}>{item.seriesCount}×</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.eventDate}>{format(new Date(item.start_time), 'd MMM yyyy HH:mm', { locale: sv })}</Text>
+              <Text style={styles.eventCategory}>{CategoryNames[item.category]}</Text>
             </View>
             <View style={styles.eventActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={() => openEditModal(event)}>
-                <Ionicons name="pencil" size={20} color={Colors.secondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(event)}>
+              {item.seriesCount === 1 && (
+                <TouchableOpacity style={styles.actionButton} onPress={() => openEditModal(item.event)}>
+                  <Ionicons name="pencil" size={20} color={Colors.secondary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteItem(item)}>
                 <Ionicons name="trash" size={20} color={Colors.error} />
               </TouchableOpacity>
             </View>
@@ -253,7 +306,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.divider },
   cancelText: { fontSize: 16, color: Colors.textOnPrimary },
   modalTitle: { fontSize: 18, fontWeight: '600', color: Colors.text },
-  saveText: { fontSize: 16, fontWeight: '600', color: Colors.primary },
+  saveText: { fontSize: 16, fontWeight: '600', color: Colors.textOnPrimary },
   modalContent: { flex: 1, padding: 16 },
   label: { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 8, marginTop: 16 },
   input: { backgroundColor: Colors.surface, borderRadius: 12, padding: 16, fontSize: 16, color: Colors.text, borderWidth: 1, borderColor: Colors.border },
@@ -261,6 +314,9 @@ const styles = StyleSheet.create({
   categoryPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   categoryOptionText: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  eventTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  seriesBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, gap: 3 },
+  seriesBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.textLight },
   dateButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: Colors.border, gap: 10 },
   recurringRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
   recurringHint: { fontSize: 13, color: Colors.textOnPrimaryMuted, marginTop: 8, lineHeight: 18 },

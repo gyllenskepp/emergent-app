@@ -82,6 +82,7 @@ class Event(BaseModel):
     start_time: datetime
     end_time: datetime
     category: str  # slug reference
+    series_id: Optional[str] = None
     created_by: str  # user_id
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -93,6 +94,7 @@ class EventCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     category: str
+    series_id: Optional[str] = None
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None

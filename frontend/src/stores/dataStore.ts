@@ -12,6 +12,7 @@ export interface Event {
   start_time: string;
   end_time: string;
   category: string;
+  series_id?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
