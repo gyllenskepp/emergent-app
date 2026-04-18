@@ -101,6 +101,7 @@ export default function AdminEventsScreen() {
   });
   const [recurring, setRecurring] = useState(false);
   const [recurringWeeks, setRecurringWeeks] = useState('4');
+  const [editingSeriesEvents, setEditingSeriesEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -126,32 +127,73 @@ export default function AdminEventsScreen() {
 
   const openEditModal = (event: Event) => {
     setEditingEvent(event);
+    setEditingSeriesEvents([]);
+    setRecurring(false);
     setFormData({ title: event.title, description: event.description, location: event.location, start_time: event.start_time, end_time: event.end_time, category: event.category });
+    setModalVisible(true);
+  };
+
+  const openEditSeriesModal = (item: ReturnType<typeof groupEvents>[0]) => {
+    setEditingEvent(item.event);
+    setEditingSeriesEvents(item.allEvents);
+    setRecurringWeeks(String(item.seriesCount));
+    setFormData({ title: item.event.title, description: item.event.description, location: item.event.location, start_time: item.event.start_time, end_time: item.event.end_time, category: item.event.category });
     setModalVisible(true);
   };
 
   const handleSave = async () => {
     if (!formData.title.trim()) { Alert.alert('Fel', 'Titel krävs'); return; }
     try {
-      if (editingEvent) {
+      const startBase = new Date(formData.start_time);
+      const endBase = new Date(formData.end_time);
+      const startH = startBase.getHours(), startM = startBase.getMinutes();
+      const endH = endBase.getHours(), endM = endBase.getMinutes();
+
+      if (editingEvent && editingSeriesEvents.length > 0) {
+        const newWeeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || editingSeriesEvents.length));
+        const seriesId = editingSeriesEvents[0].series_id!;
+
+        for (let i = 0; i < Math.min(newWeeks, editingSeriesEvents.length); i++) {
+          const start = new Date(editingSeriesEvents[i].start_time);
+          start.setHours(startH, startM, 0, 0);
+          const end = new Date(editingSeriesEvents[i].end_time);
+          end.setHours(endH, endM, 0, 0);
+          await updateEvent(editingSeriesEvents[i].id, { ...formData, start_time: start.toISOString(), end_time: end.toISOString() });
+        }
+
+        if (newWeeks < editingSeriesEvents.length) {
+          for (const e of editingSeriesEvents.slice(newWeeks)) await deleteEvent(e.id);
+        }
+
+        if (newWeeks > editingSeriesEvents.length) {
+          const lastStart = new Date(editingSeriesEvents[editingSeriesEvents.length - 1].start_time);
+          for (let i = 0; i < newWeeks - editingSeriesEvents.length; i++) {
+            const start = new Date(lastStart);
+            start.setDate(start.getDate() + (i + 1) * 7);
+            start.setHours(startH, startM, 0, 0);
+            const end = new Date(start);
+            end.setHours(endH, endM, 0, 0);
+            await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
+          }
+        }
+      } else if (editingEvent) {
         await updateEvent(editingEvent.id, formData);
-        Alert.alert('Klart', 'Event uppdaterat');
       } else if (recurring) {
         const weeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || 4));
-        const startBase = new Date(formData.start_time);
-        const endBase = new Date(formData.end_time);
         const seriesId = `series_${Date.now()}`;
         for (let i = 0; i < weeks; i++) {
-          const start = new Date(startBase); start.setDate(start.getDate() + i * 7);
-          const end = new Date(endBase); end.setDate(end.getDate() + i * 7);
+          const start = new Date(startBase);
+          start.setDate(start.getDate() + i * 7);
+          start.setHours(startH, startM, 0, 0);
+          const end = new Date(start);
+          end.setHours(endH, endM, 0, 0);
           await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
         }
-        Alert.alert('Klart', `${weeks} återkommande event skapade`);
       } else {
         await createEvent(formData);
-        Alert.alert('Klart', 'Event skapat');
       }
       setModalVisible(false);
+      setEditingSeriesEvents([]);
     } catch (error) {
       Alert.alert('Fel', 'Något gick fel');
     }
@@ -215,11 +257,9 @@ export default function AdminEventsScreen() {
               <Text style={styles.eventCategory}>{CategoryNames[item.category]}</Text>
             </View>
             <View style={styles.eventActions}>
-              {item.seriesCount === 1 && (
-                <TouchableOpacity style={styles.actionButton} onPress={() => openEditModal(item.event)}>
-                  <Ionicons name="pencil" size={20} color={Colors.secondary} />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={styles.actionButton} onPress={() => item.seriesCount > 1 ? openEditSeriesModal(item) : openEditModal(item.event)}>
+                <Ionicons name="pencil" size={20} color={Colors.secondary} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteItem(item)}>
                 <Ionicons name="trash" size={20} color={Colors.error} />
               </TouchableOpacity>
@@ -263,6 +303,21 @@ export default function AdminEventsScreen() {
             <DateField label="Starttid" value={formData.start_time} onChange={(iso) => setFormData({ ...formData, start_time: iso })} />
             <DateField label="Sluttid" value={formData.end_time} onChange={(iso) => setFormData({ ...formData, end_time: iso })} />
 
+            {editingSeriesEvents.length > 0 && (
+              <>
+                <Text style={styles.label}>Antal veckor</Text>
+                <TextInput style={styles.input} value={recurringWeeks} onChangeText={setRecurringWeeks} keyboardType="number-pad" placeholder="4" placeholderTextColor={Colors.textMuted} />
+                <Text style={styles.recurringHint}>
+                  {(() => {
+                    const n = Math.max(1, Math.min(52, parseInt(recurringWeeks) || editingSeriesEvents.length));
+                    const diff = n - editingSeriesEvents.length;
+                    if (diff === 0) return `Serien har ${n} event.`;
+                    if (diff > 0) return `Lägger till ${diff} event. Totalt ${n}.`;
+                    return `Tar bort ${-diff} event. Totalt ${n}.`;
+                  })()}
+                </Text>
+              </>
+            )}
             {!editingEvent && (
               <>
                 <View style={styles.recurringRow}>
