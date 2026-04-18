@@ -58,8 +58,15 @@ interface DataState {
   deleteNews: (id: string) => Promise<void>;
 }
 
+// In-memory token cache — set by authStore after login/checkAuth to avoid
+// AsyncStorage disk reads on every API call.
+let _cachedToken: string | null = null;
+export const setCachedAuthToken = (token: string | null) => { _cachedToken = token; };
+
 const getAuthHeader = async () => {
+  if (_cachedToken) return { 'Authorization': `Bearer ${_cachedToken}` };
   const token = await AsyncStorage.getItem('session_token');
+  if (token) _cachedToken = token;
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
@@ -122,16 +129,19 @@ export const useDataStore = create<DataState>((set, get) => ({
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(event),
       });
-      
       if (!response.ok) throw new Error('Failed to create event');
-      
-      await get().fetchEvents();
+      const newEvent = await response.json();
+      set(state => ({
+        events: [...state.events, newEvent].sort((a, b) =>
+          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        ),
+      }));
     } catch (error) {
       console.error('Create event error:', error);
       throw error;
     }
   },
-  
+
   updateEvent: async (id, updates) => {
     try {
       const headers = await getAuthHeader();
@@ -140,16 +150,15 @@ export const useDataStore = create<DataState>((set, get) => ({
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(updates),
       });
-      
       if (!response.ok) throw new Error('Failed to update event');
-      
-      await get().fetchEvents();
+      const updatedEvent = await response.json();
+      set(state => ({ events: state.events.map(e => e.id === id ? updatedEvent : e) }));
     } catch (error) {
       console.error('Update event error:', error);
       throw error;
     }
   },
-  
+
   deleteEvent: async (id) => {
     try {
       const headers = await getAuthHeader();
@@ -157,10 +166,8 @@ export const useDataStore = create<DataState>((set, get) => ({
         method: 'DELETE',
         headers,
       });
-      
       if (!response.ok) throw new Error('Failed to delete event');
-      
-      await get().fetchEvents();
+      set(state => ({ events: state.events.filter(e => e.id !== id) }));
     } catch (error) {
       console.error('Delete event error:', error);
       throw error;
@@ -204,16 +211,15 @@ export const useDataStore = create<DataState>((set, get) => ({
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(news),
       });
-      
       if (!response.ok) throw new Error('Failed to create news');
-      
-      await get().fetchNews();
+      const newNews = await response.json();
+      set(state => ({ news: [newNews, ...state.news] }));
     } catch (error) {
       console.error('Create news error:', error);
       throw error;
     }
   },
-  
+
   updateNews: async (id, updates) => {
     try {
       const headers = await getAuthHeader();
@@ -222,16 +228,15 @@ export const useDataStore = create<DataState>((set, get) => ({
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(updates),
       });
-      
       if (!response.ok) throw new Error('Failed to update news');
-      
-      await get().fetchNews();
+      const updatedNews = await response.json();
+      set(state => ({ news: state.news.map(n => n.id === id ? updatedNews : n) }));
     } catch (error) {
       console.error('Update news error:', error);
       throw error;
     }
   },
-  
+
   deleteNews: async (id) => {
     try {
       const headers = await getAuthHeader();
@@ -239,10 +244,8 @@ export const useDataStore = create<DataState>((set, get) => ({
         method: 'DELETE',
         headers,
       });
-      
       if (!response.ok) throw new Error('Failed to delete news');
-      
-      await get().fetchNews();
+      set(state => ({ news: state.news.filter(n => n.id !== id) }));
     } catch (error) {
       console.error('Delete news error:', error);
       throw error;

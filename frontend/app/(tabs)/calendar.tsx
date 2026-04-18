@@ -33,8 +33,7 @@ export default function CalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
-    fetchEvents();
-    fetchCategories();
+    Promise.all([fetchEvents(), fetchCategories()]);
   }, []);
 
   const onRefresh = async () => {

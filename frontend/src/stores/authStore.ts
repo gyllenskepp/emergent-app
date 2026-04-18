@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setCachedAuthToken } from './dataStore';
 
 // API base URL — EXPO_PUBLIC_BACKEND_URL overrides (local dev / EAS builds).
 // Falls back to the known backend for both web and native.
@@ -100,7 +101,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('[Auth] Login successful for:', data.user?.email);
       
       await AsyncStorage.setItem('session_token', data.session_token);
-      
+      setCachedAuthToken(data.session_token);
+
       set({
         user: data.user,
         sessionToken: data.session_token,
@@ -136,7 +138,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const data = await response.json();
       
       await AsyncStorage.setItem('session_token', data.session_token);
-      
+      setCachedAuthToken(data.session_token);
+
       set({
         user: data.user,
         sessionToken: data.session_token,
@@ -161,7 +164,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       await AsyncStorage.removeItem('session_token');
-      
+      setCachedAuthToken(null);
+
       set({
         user: null,
         sessionToken: null,
@@ -169,8 +173,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error) {
       console.error('Logout error:', error);
-      // Clear state anyway
       await AsyncStorage.removeItem('session_token');
+      setCachedAuthToken(null);
       set({ user: null, sessionToken: null, isAuthenticated: false });
     }
   },
@@ -205,6 +209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    setCachedAuthToken(storedToken);
     set({
       user,
       sessionToken: storedToken,

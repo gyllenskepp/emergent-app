@@ -24,8 +24,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
 
   useEffect(() => {
-    fetchEvents();
-    fetchCategories();
+    Promise.all([fetchEvents(), fetchCategories()]);
   }, []);
 
   const onRefresh = async () => {

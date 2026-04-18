@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
+import asyncio
 import httpx
 from exponent_server_sdk import PushClient, PushMessage
 import bcrypt
@@ -238,12 +239,15 @@ async def seed_database():
         await db.users.insert_one(admin_user)
         logger.info(f"Created admin user: {admin_email}")
     else:
-        # Always sync the password from env so changes take effect on restart
-        await db.users.update_one(
-            {"email": admin_email},
-            {"$set": {"password_hash": hash_password(admin_password), "role": "admin"}}
-        )
-        logger.info(f"Updated admin password for: {admin_email}")
+        # Only re-hash if the env password actually changed (bcrypt is intentionally slow)
+        updates: dict = {}
+        if not verify_password(admin_password, existing_admin.get("password_hash", "")):
+            updates["password_hash"] = hash_password(admin_password)
+            logger.info(f"Updated admin password for: {admin_email}")
+        if existing_admin.get("role") != "admin":
+            updates["role"] = "admin"
+        if updates:
+            await db.users.update_one({"email": admin_email}, {"$set": updates})
 
     # Seed some sample events
     existing_events = await db.events.count_documents({})
@@ -908,14 +912,17 @@ async def send_new_event_notifications(event: Event):
         "special_event": "Specialevent"
     }
     
-    for user in users:
-        if user.get("push_token"):
-            await send_push_notification(
-                user["push_token"],
+    tokens = [u["push_token"] for u in users if u.get("push_token")]
+    if tokens:
+        await asyncio.gather(*[
+            send_push_notification(
+                token,
                 f"Nytt event: {event.title}",
                 f"{category_names.get(event.category, event.category)} - {event.start_time.strftime('%d/%m %H:%M')}",
                 {"event_id": event.id, "type": "new_event"}
             )
+            for token in tokens
+        ])
 
 async def send_event_update_notifications(event: Event):
     """Send notifications for event updates"""
@@ -924,15 +931,18 @@ async def send_event_update_notifications(event: Event):
         "notification_preferences.enabled": True,
         f"notification_preferences.categories.{event.category}": True
     }, {"_id": 0}).to_list(1000)
-    
-    for user in users:
-        if user.get("push_token"):
-            await send_push_notification(
-                user["push_token"],
+
+    tokens = [u["push_token"] for u in users if u.get("push_token")]
+    if tokens:
+        await asyncio.gather(*[
+            send_push_notification(
+                token,
                 f"Event uppdaterat: {event.title}",
-                f"Tid eller plats har ändrats - kolla detaljerna!",
+                "Tid eller plats har ändrats - kolla detaljerna!",
                 {"event_id": event.id, "type": "event_update"}
             )
+            for token in tokens
+        ])
 
 async def send_news_notifications(news: News):
     """Send notifications for new news"""
@@ -941,15 +951,18 @@ async def send_news_notifications(news: News):
         "notification_preferences.enabled": True,
         "notification_preferences.categories.news": True
     }, {"_id": 0}).to_list(1000)
-    
-    for user in users:
-        if user.get("push_token"):
-            await send_push_notification(
-                user["push_token"],
+
+    tokens = [u["push_token"] for u in users if u.get("push_token")]
+    if tokens:
+        await asyncio.gather(*[
+            send_push_notification(
+                token,
                 f"BORKA Nyhet: {news.title}",
                 news.body[:100] + "..." if len(news.body) > 100 else news.body,
                 {"news_id": news.id, "type": "news"}
             )
+            for token in tokens
+        ])
 
 # ==================== STARTUP ====================
 
@@ -957,6 +970,18 @@ async def send_news_notifications(news: News):
 async def startup_event():
     """Run on startup"""
     await seed_database()
+    # Ensure indexes exist — idempotent, fast after first run
+    await asyncio.gather(
+        db.user_sessions.create_index("session_token", unique=True, background=True),
+        db.user_sessions.create_index("user_id", background=True),
+        db.users.create_index("email", unique=True, background=True),
+        db.users.create_index("user_id", unique=True, background=True),
+        db.events.create_index("id", unique=True, background=True),
+        db.events.create_index("start_time", background=True),
+        db.events.create_index("category", background=True),
+        db.news.create_index("id", unique=True, background=True),
+    )
+    logger.info("Database indexes ensured")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
