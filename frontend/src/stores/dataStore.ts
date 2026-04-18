@@ -49,6 +49,9 @@ interface DataState {
   createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => Promise<void>;
   updateEvent: (id: string, updates: Partial<Event>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
+  createEventRaw: (event: Omit<Event, 'id' | 'created_at' | 'updated_at' | 'created_by'>) => Promise<void>;
+  updateEventRaw: (id: string, updates: Partial<Event>) => Promise<void>;
+  deleteEventRaw: (id: string) => Promise<void>;
   
   createNews: (news: Omit<News, 'id' | 'created_at' | 'publish_date' | 'created_by'>) => Promise<void>;
   updateNews: (id: string, updates: Partial<News>) => Promise<void>;
@@ -164,6 +167,35 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
   },
   
+  createEventRaw: async (event) => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(event),
+    });
+    if (!response.ok) throw new Error('Failed to create event');
+  },
+
+  updateEventRaw: async (id, updates) => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/api/events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update event');
+  },
+
+  deleteEventRaw: async (id) => {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_URL}/api/events/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!response.ok) throw new Error('Failed to delete event');
+  },
+
   createNews: async (news) => {
     try {
       const headers = await getAuthHeader();

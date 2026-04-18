@@ -46,7 +46,8 @@ function groupEvents(events: Event[]) {
 }
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
-  const localValue = format(new Date(value), "yyyy-MM-dd'T'HH:mm");
+  // Treat stored ISO strings as naive UTC — show exactly what's stored, store exactly what's typed.
+  const localValue = value.length >= 16 ? value.substring(0, 16) : value;
   if (Platform.OS === 'web') {
     return (
       <View>
@@ -57,8 +58,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
             type="datetime-local"
             value={localValue}
             onChange={(e) => {
-              const d = new Date(e.target.value);
-              if (!isNaN(d.getTime())) onChange(d.toISOString());
+              if (e.target.value) onChange(e.target.value + ':00.000Z');
             }}
             style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, color: '#1D3557', backgroundColor: 'transparent', cursor: 'pointer', fontFamily: 'inherit' } as any}
           />
@@ -71,12 +71,10 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={styles.input}
-        value={format(new Date(value), 'yyyy-MM-dd HH:mm')}
+        value={localValue.replace('T', ' ')}
         onChangeText={(text) => {
-          try {
-            const d = new Date(text.replace(' ', 'T'));
-            if (!isNaN(d.getTime())) onChange(d.toISOString());
-          } catch (e) {}
+          const cleaned = text.trim().replace(' ', 'T');
+          if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(cleaned)) onChange(cleaned + ':00.000Z');
         }}
         placeholder="2025-01-15 18:00"
         placeholderTextColor={Colors.textMuted}
@@ -88,7 +86,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
 export default function AdminEventsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { events, fetchEvents, categories, fetchCategories, createEvent, updateEvent, deleteEvent } = useDataStore();
+  const { events, fetchEvents, categories, fetchCategories, createEvent, updateEvent, deleteEvent, createEventRaw, updateEventRaw, deleteEventRaw } = useDataStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState({
@@ -114,12 +112,9 @@ export default function AdminEventsScreen() {
 
   const openCreateModal = () => {
     setEditingEvent(null);
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(18, 0, 0, 0);
-    const end = new Date(now);
-    end.setHours(21, 30, 0, 0);
-    setFormData({ title: '', description: '', location: 'Odengatan 31, Sandviken', start_time: start.toISOString(), end_time: end.toISOString(), category: 'open_game_night' });
+    setEditingSeriesEvents([]);
+    const today = new Date().toISOString().substring(0, 10);
+    setFormData({ title: '', description: '', location: 'Odengatan 31, Sandviken', start_time: `${today}T18:00:00.000Z`, end_time: `${today}T21:30:00.000Z`, category: 'open_game_night' });
     setRecurring(false);
     setRecurringWeeks('4');
     setModalVisible(true);
@@ -146,49 +141,59 @@ export default function AdminEventsScreen() {
     try {
       const startBase = new Date(formData.start_time);
       const endBase = new Date(formData.end_time);
-      const startH = startBase.getHours(), startM = startBase.getMinutes();
-      const endH = endBase.getHours(), endM = endBase.getMinutes();
+      // Use UTC getters so behaviour is timezone-independent (times stored as naive UTC)
+      const startH = startBase.getUTCHours(), startM = startBase.getUTCMinutes();
+      const endH = endBase.getUTCHours(), endM = endBase.getUTCMinutes();
 
       if (editingEvent && editingSeriesEvents.length > 0) {
         const newWeeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || editingSeriesEvents.length));
         const seriesId = editingSeriesEvents[0].series_id!;
+        const keepCount = Math.min(newWeeks, editingSeriesEvents.length);
 
-        for (let i = 0; i < Math.min(newWeeks, editingSeriesEvents.length); i++) {
-          const start = new Date(editingSeriesEvents[i].start_time);
-          start.setHours(startH, startM, 0, 0);
-          const end = new Date(editingSeriesEvents[i].end_time);
-          end.setHours(endH, endM, 0, 0);
-          await updateEvent(editingSeriesEvents[i].id, { ...formData, start_time: start.toISOString(), end_time: end.toISOString() });
-        }
+        await Promise.all(
+          editingSeriesEvents.slice(0, keepCount).map((e) => {
+            const start = new Date(e.start_time);
+            start.setUTCHours(startH, startM, 0, 0);
+            const end = new Date(e.end_time);
+            end.setUTCHours(endH, endM, 0, 0);
+            return updateEventRaw(e.id, { ...formData, start_time: start.toISOString(), end_time: end.toISOString() });
+          })
+        );
 
         if (newWeeks < editingSeriesEvents.length) {
-          for (const e of editingSeriesEvents.slice(newWeeks)) await deleteEvent(e.id);
+          await Promise.all(editingSeriesEvents.slice(newWeeks).map((e) => deleteEventRaw(e.id)));
         }
 
         if (newWeeks > editingSeriesEvents.length) {
           const lastStart = new Date(editingSeriesEvents[editingSeriesEvents.length - 1].start_time);
-          for (let i = 0; i < newWeeks - editingSeriesEvents.length; i++) {
-            const start = new Date(lastStart);
-            start.setDate(start.getDate() + (i + 1) * 7);
-            start.setHours(startH, startM, 0, 0);
-            const end = new Date(start);
-            end.setHours(endH, endM, 0, 0);
-            await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
-          }
+          await Promise.all(
+            Array.from({ length: newWeeks - editingSeriesEvents.length }, (_, i) => {
+              const start = new Date(lastStart);
+              start.setUTCDate(start.getUTCDate() + (i + 1) * 7);
+              start.setUTCHours(startH, startM, 0, 0);
+              const end = new Date(start);
+              end.setUTCHours(endH, endM, 0, 0);
+              return createEventRaw({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
+            })
+          );
         }
+        await fetchEvents();
       } else if (editingEvent) {
         await updateEvent(editingEvent.id, formData);
       } else if (recurring) {
         const weeks = Math.max(1, Math.min(52, parseInt(recurringWeeks) || 4));
         const seriesId = `series_${Date.now()}`;
-        for (let i = 0; i < weeks; i++) {
-          const start = new Date(startBase);
-          start.setDate(start.getDate() + i * 7);
-          start.setHours(startH, startM, 0, 0);
-          const end = new Date(start);
-          end.setHours(endH, endM, 0, 0);
-          await createEvent({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
-        }
+        await Promise.all(
+          Array.from({ length: weeks }, (_, i) => {
+            const start = new Date(startBase);
+            start.setUTCDate(start.getUTCDate() + i * 7);
+            start.setUTCHours(startH, startM, 0, 0);
+            const end = new Date(start);
+            end.setUTCHours(endH, endM, 0, 0);
+            return createEventRaw({ ...formData, start_time: start.toISOString(), end_time: end.toISOString(), series_id: seriesId });
+          })
+        );
+        await fetchEvents();
       } else {
         await createEvent(formData);
       }
