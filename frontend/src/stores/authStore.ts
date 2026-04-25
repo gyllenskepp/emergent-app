@@ -4,11 +4,20 @@ import { setCachedAuthToken } from './dataStore';
 
 // API base URL — EXPO_PUBLIC_BACKEND_URL overrides (local dev / EAS builds).
 // Falls back to the known backend for both web and native.
+const normalizeApiBase = (url: string) =>
+  url.replace(/\/+$/, '').replace(/\/api$/, '');
+
 const getApiUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL?.trim();
   if (envUrl && envUrl.length > 0) {
-    return envUrl;
+    return normalizeApiBase(envUrl);
   }
+
+  // On web we can use same-origin API rewrites (e.g. Vercel /api -> backend).
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+
   return 'https://borka-mobile-dev.preview.emergentagent.com';
 };
 
